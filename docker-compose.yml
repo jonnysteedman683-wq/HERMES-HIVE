@@ -1,0 +1,38 @@
+version: '3.8'
+
+services:
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    ports:
+      - "${PORT:-3000}:3000"
+    environment:
+      - GOOGLE_API_KEY=${GOOGLE_API_KEY}
+      - PORT=${PORT:-3000}
+      - HIVE_DB_PATH=${HIVE_DB_PATH:-./.hive/hive.db}
+    volumes:
+      - .hive-data:/app/.hive
+      - ./dist:/app/dist:ro
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost:3000"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+    networks:
+      - app-network
+
+  database:
+    image: sqlite:latest
+    volumes:
+      - .hive-data:/hive
+    networks:
+      - app-network
+
+volumes:
+  .hive-data:
+
+networks:
+  app-network:
+    driver: bridge

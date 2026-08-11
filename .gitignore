@@ -1,8 +1,18 @@
+# Node.js project with bun
+# https://bun.sh/
+
+# dependencies
 node_modules/
-build/
+
+# build output
 dist/
-coverage/
-.DS_Store
-*.log
-.env*
-!.env.example
+
+# hive database
+.hive/
+
+# environment
+.env
+package-lock.json
+
+# bun lockfile
+bun.lock
