@@ -90,7 +90,6 @@ import { llmProvider, resetLlmProvider, geminiProvider, createLlmProvider } from
 import { taskRunner, TaskWorker } from './tasks';
 import { HiveEvent } from '../shared/types';
 import { causalEvaluationEngine } from './learning/causalEvaluationEngine';
-import { causalEvaluationEngine } from './learning/causalEvaluationEngine';
 import { reputationEngine } from './learning/reputationEngine';
 import { capabilityEvolutionEngine } from './learning/capabilityEvolutionEngine';
 import { symbioticSynthesisEngine } from './learning/symbioticSynthesisEngine';
