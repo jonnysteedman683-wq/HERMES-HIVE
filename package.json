@@ -7,10 +7,12 @@
     "dev": "vite --port=3000 --host=0.0.0.0",
     "build": "vite build",
     "preview": "vite preview",
+    "start": "vite preview",
     "clean": "rm -rf dist .hive",
     "lint": "tsc --noEmit",
+    "lint:fix": "tsc --noEmit",
     "test": "vitest run",
-    "lint:fix": "tsc --noEmit"
+    "test:coverage": "vitest run --coverage"
   },
   "dependencies": {
     "@google/genai": "^2.4.0",
