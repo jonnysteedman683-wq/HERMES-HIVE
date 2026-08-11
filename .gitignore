@@ -12,7 +12,8 @@ dist/
 
 # environment
 .env
-package-lock.json
+*.log
 
 # bun lockfile
 bun.lock
+bun.lockb

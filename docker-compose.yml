@@ -12,26 +12,19 @@ services:
       - PORT=${PORT:-3000}
       - HIVE_DB_PATH=${HIVE_DB_PATH:-./.hive/hive.db}
     volumes:
-      - .hive-data:/app/.hive
+      - hive-data:/app/.hive
       - ./dist:/app/dist:ro
     restart: unless-stopped
     healthcheck:
-      test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost:3000"]
+      test: ["CMD-SHELL", "wget --quiet --tries=1 --spider http://localhost:3000 || exit 1"]
       interval: 30s
       timeout: 10s
       retries: 3
     networks:
       - app-network
 
-  database:
-    image: sqlite:latest
-    volumes:
-      - .hive-data:/hive
-    networks:
-      - app-network
-
 volumes:
-  .hive-data:
+  hive-data:
 
 networks:
   app-network:
