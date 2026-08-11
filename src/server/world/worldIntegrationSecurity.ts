@@ -56,7 +56,7 @@ export class WorldIntegrationSecurity {
     messageBus.publish('EMERGENCY_CONTROL', 'Security', {
       action: 'DISCONNECT_WEB_BRIDGE',
       message: 'Hermes Web Bridge disconnected immediately by emergency control.',
-    }, { severity: 'critical' });
+    }, { severity: 'error' });
   }
 
   public reconnectWebBridge(): void {
@@ -72,7 +72,7 @@ export class WorldIntegrationSecurity {
     messageBus.publish('EMERGENCY_CONTROL', 'Security', {
       action: 'FREEZE_FEDERATION',
       message: 'All federated operations frozen immediately.',
-    }, { severity: 'critical' });
+    }, { severity: 'error' });
   }
 
   public unfreezeFederation(): void {

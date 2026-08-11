@@ -28,6 +28,7 @@ import { Agent } from './shared/types';
 export default function App() {
   const [activeTab, setActiveTab] = useState<TabType>('dashboard');
   const [selectedAgent, setSelectedAgent] = useState<Agent | null>(null);
+  const [selectedAgents, setSelectedAgents] = useState<Agent[]>([]);
   const [queuedChatPrompt, setQueuedChatPrompt] = useState<string>('');
   const [queuedChatContext, setQueuedChatContext] = useState<string>('');
   const [isShortcutsOpen, setIsShortcutsOpen] = useState(false);
@@ -46,6 +47,7 @@ export default function App() {
     sendHermesCommand,
     triggerDemoScenario,
     applyAgentAction,
+    applyBulkAgentAction,
   } = useHiveData();
 
   // Register global hotkeys hook
@@ -58,6 +60,7 @@ export default function App() {
     onCloseModals: () => {
       setIsShortcutsOpen(false);
       setSelectedAgent(null);
+      setSelectedAgents([]);
     },
   });
 
@@ -67,6 +70,18 @@ export default function App() {
 
   const handleSelectAgent = (agent: Agent) => {
     setSelectedAgent(agent);
+    if (!selectedAgents.some((a) => a.id === agent.id)) {
+      setSelectedAgents([agent]);
+    }
+  };
+
+  const handleSelectAgents = (agentsList: Agent[]) => {
+    setSelectedAgents(agentsList);
+    if (agentsList.length > 0) {
+      setSelectedAgent(agentsList[0]);
+    } else {
+      setSelectedAgent(null);
+    }
   };
 
   const handleAskHermesFromWidget = (query: string, contextTitle: string) => {
@@ -116,7 +131,9 @@ export default function App() {
               missions={missions}
               events={events}
               diagnostics={diagnostics}
+              selectedAgents={selectedAgents}
               onSelectAgent={handleSelectAgent}
+              onSelectAgents={handleSelectAgents}
               onSendObjective={sendHermesCommand}
               onTriggerDemo={triggerDemoScenario}
             />
@@ -154,7 +171,12 @@ export default function App() {
 
           {activeTab === 'swarm' && (
             <div className="h-full flex flex-col gap-6">
-              <SwarmTopology agents={agents} onSelectAgent={handleSelectAgent} />
+              <SwarmTopology
+                agents={agents}
+                selectedAgents={selectedAgents}
+                onSelectAgent={handleSelectAgent}
+                onSelectAgents={handleSelectAgents}
+              />
             </div>
           )}
 
@@ -186,8 +208,14 @@ export default function App() {
       <AgentInspector
         agent={selectedAgent}
         agents={agents}
-        onClose={() => setSelectedAgent(null)}
+        selectedAgents={selectedAgents}
+        onClose={() => {
+          setSelectedAgent(null);
+          setSelectedAgents([]);
+        }}
         onApplyAction={handleApplyAgentAction}
+        onApplyBulkAction={applyBulkAgentAction}
+        onSelectAgents={handleSelectAgents}
       />
 
       {/* Global Swarm Keyboard Shortcuts Modal */}

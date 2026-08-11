@@ -1,11 +1,109 @@
 import React from 'react';
-import { Settings, Play, ShieldAlert, Cpu, Sparkles, CheckCircle2 } from 'lucide-react';
+import { 
+  Settings, 
+  Play, 
+  ShieldAlert, 
+  Cpu, 
+  Sparkles, 
+  CheckCircle2, 
+  Link2, 
+  Activity, 
+  RefreshCw, 
+  Check, 
+  AlertTriangle 
+} from 'lucide-react';
 
 interface SettingsPanelProps {
   onTriggerDemo: (scenario: string) => Promise<void>;
 }
 
 export const SettingsPanel: React.FC<SettingsPanelProps> = ({ onTriggerDemo }) => {
+  const [isEnabled, setIsEnabled] = React.useState(false);
+  const [providerType, setProviderType] = React.useState<'gemini' | 'openai' | 'ollama' | 'custom'>('gemini');
+  const [apiUrl, setApiUrl] = React.useState('');
+  const [apiKey, setApiKey] = React.useState('');
+  const [modelName, setModelName] = React.useState('');
+  const [showKey, setShowKey] = React.useState(false);
+
+  const [testStatus, setTestStatus] = React.useState<'idle' | 'testing' | 'success' | 'error'>('idle');
+  const [testMessage, setTestMessage] = React.useState('');
+  const [saveStatus, setSaveStatus] = React.useState<'idle' | 'saving' | 'saved' | 'error'>('idle');
+
+  React.useEffect(() => {
+    fetch('/api/agent-ai/settings')
+      .then((res) => res.json())
+      .then((data) => {
+        if (data?.settings) {
+          setIsEnabled(data.settings.isEnabled);
+          setProviderType(data.settings.providerType);
+          setApiUrl(data.settings.apiUrl || '');
+          setApiKey(data.settings.apiKey || '');
+          setModelName(data.settings.modelName || '');
+        }
+      })
+      .catch((err) => console.error('Failed to fetch settings:', err));
+  }, []);
+
+  const handleSave = async () => {
+    setSaveStatus('saving');
+    setTestStatus('idle');
+    try {
+      const res = await fetch('/api/agent-ai/settings', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          isEnabled,
+          providerType,
+          apiUrl,
+          apiKey,
+          modelName,
+        }),
+      });
+      const data = await res.json();
+      if (data?.success) {
+        setApiKey(data.settings.apiKey || '');
+        setSaveStatus('saved');
+        setTimeout(() => setSaveStatus('idle'), 4000);
+      } else {
+        setSaveStatus('error');
+      }
+    } catch (err) {
+      console.error('Failed to save settings:', err);
+      setSaveStatus('error');
+    }
+  };
+
+  const handleTestConnection = async () => {
+    setTestStatus('testing');
+    setSaveStatus('idle');
+    try {
+      const res = await fetch('/api/agent-ai/test', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          isEnabled,
+          providerType,
+          apiUrl,
+          apiKey,
+          modelName,
+          connectionStatus: 'disconnected',
+        }),
+      });
+      const data = await res.json();
+      if (data?.success) {
+        setTestStatus('success');
+        setTestMessage(data.message);
+      } else {
+        setTestStatus('error');
+        setTestMessage(data.message || 'Verification Failed');
+      }
+    } catch (err: any) {
+      console.error('Failed to test connection:', err);
+      setTestStatus('error');
+      setTestMessage(err.message || 'Network error during test');
+    }
+  };
+
   return (
     <div className="h-full flex flex-col gap-6 overflow-y-auto pr-1">
       {/* Header */}
@@ -21,6 +119,169 @@ export const SettingsPanel: React.FC<SettingsPanelProps> = ({ onTriggerDemo }) =
             <p className="text-xs text-slate-400">
               Configure Hermes executive parameters, model aliases, self-healing heartbeat intervals, and run prebuilt live demo scenarios.
             </p>
+          </div>
+        </div>
+      </div>
+
+      {/* Connected Hermes Agent AI Connection Panel */}
+      <div className="p-6 rounded-2xl bg-slate-950 border border-slate-800/80 shadow-xl space-y-4">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <Link2 className="w-5 h-5 text-cyan-400" />
+            <h3 className="text-xs font-mono font-bold text-slate-300 uppercase tracking-wider">
+              Connected Hermes Agent AI
+            </h3>
+          </div>
+          <label className="relative inline-flex items-center cursor-pointer">
+            <input 
+              type="checkbox" 
+              checked={isEnabled} 
+              onChange={(e) => setIsEnabled(e.target.checked)}
+              className="sr-only peer" 
+            />
+            <div className="w-11 h-6 bg-slate-800 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-slate-300 after:border-slate-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-cyan-500 peer-checked:after:bg-slate-950"></div>
+            <span className="ml-3 text-xs font-medium text-slate-300">
+              {isEnabled ? 'Active Integration' : 'Standby Mode'}
+            </span>
+          </label>
+        </div>
+
+        <p className="text-xs text-slate-400 font-sans leading-relaxed">
+          Establish an outbound execution boundary. Connecting to an external Hermes Agent AI or local Ollama instance redirects advanced reasoning and collective swarm decisions to that custom brain.
+        </p>
+
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div className="space-y-1.5">
+            <label className="text-[11px] font-mono font-bold text-slate-400 uppercase">Provider Type</label>
+            <select 
+              value={providerType} 
+              onChange={(e) => {
+                const val = e.target.value as any;
+                setProviderType(val);
+                if (val === 'gemini') {
+                  setApiUrl('https://generativelanguage.googleapis.com/v1beta/models');
+                  setModelName('gemini-2.5-flash');
+                } else if (val === 'ollama') {
+                  setApiUrl('http://localhost:11434/v1');
+                  setModelName('llama3');
+                } else if (val === 'openai') {
+                  setApiUrl('https://api.openai.com/v1');
+                  setModelName('gpt-4o-mini');
+                } else {
+                  setApiUrl('');
+                  setModelName('');
+                }
+              }}
+              className="w-full bg-slate-900 border border-slate-800 text-xs rounded-lg px-3 py-2 text-slate-200 focus:outline-none focus:border-cyan-500/50"
+            >
+              <option value="gemini">Google Gemini API</option>
+              <option value="openai">OpenAI Compatible API</option>
+              <option value="ollama">Local Ollama Instance</option>
+              <option value="custom">Custom Agent AI Server</option>
+            </select>
+          </div>
+
+          <div className="space-y-1.5">
+            <label className="text-[11px] font-mono font-bold text-slate-400 uppercase">Model Identifier</label>
+            <input 
+              type="text" 
+              value={modelName} 
+              onChange={(e) => setModelName(e.target.value)}
+              placeholder="Model name"
+              className="w-full bg-slate-900 border border-slate-800 text-xs rounded-lg px-3 py-2 text-slate-200 focus:outline-none focus:border-cyan-500/50 font-mono"
+            />
+          </div>
+
+          <div className="space-y-1.5 md:col-span-2">
+            <label className="text-[11px] font-mono font-bold text-slate-400 uppercase">Endpoint API URL</label>
+            <input 
+              type="text" 
+              value={apiUrl} 
+              onChange={(e) => setApiUrl(e.target.value)}
+              placeholder="https://..."
+              className="w-full bg-slate-900 border border-slate-800 text-xs rounded-lg px-3 py-2 text-slate-200 focus:outline-none focus:border-cyan-500/50 font-mono"
+            />
+          </div>
+
+          <div className="space-y-1.5 md:col-span-2">
+            <label className="text-[11px] font-mono font-bold text-slate-400 uppercase flex items-center justify-between">
+              <span>Secret API Key / Authentication Token</span>
+              <button 
+                type="button"
+                onClick={() => setShowKey(!showKey)}
+                className="text-[10px] text-cyan-400 hover:underline hover:text-cyan-300"
+              >
+                {showKey ? 'Hide Secret' : 'Reveal Secret'}
+              </button>
+            </label>
+            <input 
+              type={showKey ? 'text' : 'password'} 
+              value={apiKey} 
+              onChange={(e) => setApiKey(e.target.value)}
+              placeholder={apiKey ? '••••••••••••••••' : 'Enter security key/token'}
+              className="w-full bg-slate-900 border border-slate-800 text-xs rounded-lg px-3 py-2 text-slate-200 focus:outline-none focus:border-cyan-500/50 font-mono"
+            />
+          </div>
+        </div>
+
+        {/* Action Controls */}
+        <div className="flex flex-wrap items-center justify-between gap-4 pt-2">
+          <div className="flex items-center gap-3">
+            <button
+              onClick={handleTestConnection}
+              disabled={testStatus === 'testing'}
+              className="px-4 py-2 rounded-lg border border-slate-700 bg-slate-900 hover:bg-slate-800 text-xs font-semibold text-slate-300 transition-all flex items-center gap-2 disabled:opacity-50"
+            >
+              {testStatus === 'testing' ? (
+                <>
+                  <RefreshCw className="w-3.5 h-3.5 animate-spin text-cyan-400" />
+                  Testing AI Endpoint...
+                </>
+              ) : (
+                <>
+                  <Activity className="w-3.5 h-3.5 text-cyan-400" />
+                  Test AI Connection
+                </>
+              )}
+            </button>
+
+            <button
+              onClick={handleSave}
+              disabled={saveStatus === 'saving'}
+              className="px-4 py-2 rounded-lg bg-cyan-500 hover:bg-cyan-400 text-slate-950 font-bold text-xs transition-all flex items-center gap-2 disabled:opacity-50"
+            >
+              {saveStatus === 'saving' ? (
+                <>
+                  <RefreshCw className="w-3.5 h-3.5 animate-spin" />
+                  Saving...
+                </>
+              ) : (
+                <>
+                  Save AI Configuration
+                </>
+              )}
+            </button>
+          </div>
+
+          <div className="text-xs">
+            {testStatus === 'success' && (
+              <span className="text-emerald-400 flex items-center gap-1.5 font-mono">
+                <Check className="w-4 h-4 text-emerald-400 animate-pulse" />
+                {testMessage || 'Connected! Connected to Custom Agent AI successfully.'}
+              </span>
+            )}
+            {testStatus === 'error' && (
+              <span className="text-rose-400 flex items-center gap-1.5 font-mono">
+                <AlertTriangle className="w-4 h-4 text-rose-400" />
+                {testMessage || 'Connection failed'}
+              </span>
+            )}
+            {saveStatus === 'saved' && (
+              <span className="text-emerald-400 flex items-center gap-1.5 font-mono">
+                <Check className="w-4 h-4 text-emerald-400" />
+                Configuration saved successfully!
+              </span>
+            )}
           </div>
         </div>
       </div>

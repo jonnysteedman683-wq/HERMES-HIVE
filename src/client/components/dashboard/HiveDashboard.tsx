@@ -25,7 +25,9 @@ interface HiveDashboardProps {
   missions: Mission[];
   events: HiveEvent[];
   diagnostics: DiagnosticsMetrics | null;
+  selectedAgents?: Agent[];
   onSelectAgent: (agent: Agent) => void;
+  onSelectAgents?: (agents: Agent[]) => void;
   onSendObjective: (command: string) => Promise<void>;
   onTriggerDemo: (scenario: string) => Promise<void>;
 }
@@ -35,7 +37,9 @@ export const HiveDashboard: React.FC<HiveDashboardProps> = ({
   missions,
   events,
   diagnostics,
+  selectedAgents,
   onSelectAgent,
+  onSelectAgents,
   onSendObjective,
   onTriggerDemo,
 }) => {
@@ -398,7 +402,12 @@ export const HiveDashboard: React.FC<HiveDashboardProps> = ({
       )}
 
       {/* Main Center: Living Swarm Topology Visualizer */}
-      <SwarmTopology agents={agents} onSelectAgent={onSelectAgent} />
+      <SwarmTopology
+        agents={agents}
+        selectedAgents={selectedAgents}
+        onSelectAgent={onSelectAgent}
+        onSelectAgents={onSelectAgents}
+      />
 
       {/* Bottom Grid: Active Missions, Quick Action History & Real-Time Event Feed */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">

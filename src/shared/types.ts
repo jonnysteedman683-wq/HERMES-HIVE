@@ -141,6 +141,8 @@ export type WorldEntityType =
   | 'Resource'
   | 'Event'
   | 'Assumption'
+  | 'Knowledge'
+  | 'Observation'
   | 'Unknown';
 
 export type WorldRelationType =
@@ -152,7 +154,8 @@ export type WorldRelationType =
   | 'USES'
   | 'THREATENS'
   | 'BLOCKS'
-  | 'PRODUCED_BY';
+  | 'PRODUCED_BY'
+  | 'PROVIDES';
 
 export interface WorldEntity {
   id: string;
@@ -425,7 +428,15 @@ export type HiveEventType =
   | 'SYSTEM_ALERT'
   | 'HERMES_DECISION'
   | 'HEALING_ACTION'
-  | 'AGENT_DIRECT_MESSAGE';
+  | 'AGENT_DIRECT_MESSAGE'
+  | 'RESEARCH_TRIGGERED'
+  | 'CAPABILITY_DISCOVERED'
+  | 'REPUTATION_DECAY_APPLIED'
+  | 'CAPABILITY_REPUTATION_UPDATED'
+  | 'BRIDGE_WARNING'
+  | 'OUTCOME_VERIFIED'
+  | 'WORLD_EVENT_INGESTED'
+  | 'EMERGENCY_CONTROL';
 
 export interface HiveEvent {
   id: string;
@@ -1413,14 +1424,14 @@ export interface CapabilityResponse {
     completedAt?: string;
     durationMs: number;
   };
-  executionMetadata: {
-    providerUsed: string;
-    capabilityVersion: string;
-    executionMode: ExecutionMode;
+  executionMetadata?: {
+    providerUsed?: string;
+    capabilityVersion?: string;
+    executionMode?: ExecutionMode;
     simulatedSideEffects?: string[];
     costEstimateTokens?: number;
-    traceId: string;
-    correlationId: string;
+    traceId?: string;
+    correlationId?: string;
   };
 }
 
@@ -1506,7 +1517,7 @@ export interface CausalTraceSpan {
   source: string;
   actor: string;
   actorRole?: string;
-  component: 'AGENT' | 'HIVE' | 'FEDERATION' | 'MISSION' | 'DECISION' | 'MEMORY' | 'CAPABILITY' | 'HERMES_WEB' | 'WORLD_STATE';
+  component: 'AGENT' | 'HIVE' | 'FEDERATION' | 'MISSION' | 'DECISION' | 'MEMORY' | 'CAPABILITY' | 'HERMES_WEB' | 'HERMES_WEB_BRIDGE' | 'WORLD_STATE';
   action: string;
   inputs?: Record<string, any>;
   outputs?: Record<string, any>;

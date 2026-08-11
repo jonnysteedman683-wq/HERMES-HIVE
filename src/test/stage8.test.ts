@@ -113,7 +113,7 @@ async function runStage8Tests() {
 
   // Test 6: World Event Routing
   console.log('\n--- Scenario 6: Intelligent Event Routing ---');
-  let eventTriggered = false;
+  let eventTriggered: boolean = false;
   worldEventBus.subscribe('API_RATE_LIMIT_EXCEEDED', (evt) => {
     eventTriggered = true;
     assert(evt.payload.service === 'web.search', 'Event payload must contain correct service parameter');
@@ -129,7 +129,7 @@ async function runStage8Tests() {
     targetHives: ['Hive-Alpha-Executive'],
   });
 
-  assert(eventTriggered === true, 'Subscribed Hive should successfully receive the event');
+  assert(Boolean(eventTriggered), 'Subscribed Hive should successfully receive the event');
   console.log('✓ Scenario 6 Passed: Intelligent event bus correctly dispatched notifications to relevant targets.');
 
   // Test 7: Integration Security & Emergency Shutdown

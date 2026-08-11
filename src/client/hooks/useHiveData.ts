@@ -133,6 +133,22 @@ export function useHiveData() {
     }
   };
 
+  const applyBulkAgentAction = async (agentIds: string[], action: 'pause' | 'resume' | 'terminate' | 'restart') => {
+    try {
+      const res = await fetch('/api/agents/bulk-action', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ agentIds, action }),
+      });
+      const data = await res.json();
+      await fetchData();
+      return data;
+    } catch (err) {
+      console.error(`[useHiveData] Error applying bulk agent action ${action}:`, err);
+      throw err;
+    }
+  };
+
   return {
     agents,
     missions,
@@ -146,5 +162,6 @@ export function useHiveData() {
     sendHermesCommand,
     triggerDemoScenario,
     applyAgentAction,
+    applyBulkAgentAction,
   };
 }

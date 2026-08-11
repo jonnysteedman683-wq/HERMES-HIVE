@@ -71,6 +71,7 @@ import { hermesWebEngine } from './web/hermesWebEngine';
 import { webCapabilityClient } from './hermes/webCapabilityClient';
 import { deepDiagnosticsEngine } from './diagnostics/deepDiagnosticsEngine';
 import { chatEngine } from './hermes/chatEngine';
+import { agentConfigManager } from './gemini/agentConfig';
 import { HiveEvent } from '../shared/types';
 import { causalEvaluationEngine } from './learning/causalEvaluationEngine';
 import { reputationEngine } from './learning/reputationEngine';
@@ -292,6 +293,24 @@ export function apiMiddleware(): Plugin {
             return jsonResponse({ agent: newAgent });
           }
 
+          if (url === '/api/agents/bulk-action' && method === 'POST') {
+            const body = await getBody();
+            const { agentIds, action } = body || {};
+            if (!Array.isArray(agentIds) || !action) {
+              return jsonResponse({ error: 'Invalid agentIds array or action' }, 400);
+            }
+            const updatedAgents = [];
+            for (const id of agentIds) {
+              let updated;
+              if (action === 'pause') updated = agentRegistry.pauseAgent(id);
+              else if (action === 'resume') updated = agentRegistry.resumeAgent(id);
+              else if (action === 'terminate') updated = agentRegistry.terminateAgent(id);
+              else if (action === 'restart') updated = agentRegistry.restartAgent(id);
+              if (updated) updatedAgents.push(updated);
+            }
+            return jsonResponse({ success: true, count: updatedAgents.length, agents: updatedAgents });
+          }
+
           if (url.startsWith('/api/agents/')) {
             const parts = url.split('/');
             const agentId = parts[3];
@@ -500,6 +519,23 @@ export function apiMiddleware(): Plugin {
             if (quickActionHistory.length > 50) quickActionHistory.pop();
 
             return jsonResponse({ scenario, prompt, result, history: quickActionHistory });
+          }
+
+          // Hermes Agent AI Connection API
+          if (url === '/api/agent-ai/settings' && method === 'GET') {
+            return jsonResponse({ settings: agentConfigManager.getSettingsSafe() });
+          }
+
+          if (url === '/api/agent-ai/settings' && method === 'POST') {
+            const body = await getBody();
+            const safeSettings = agentConfigManager.updateSettings(body);
+            return jsonResponse({ success: true, settings: safeSettings });
+          }
+
+          if (url === '/api/agent-ai/test' && method === 'POST') {
+            const body = await getBody();
+            const result = await agentConfigManager.testConnection(body);
+            return jsonResponse(result);
           }
 
           // 11. Stage 2 — Goals API

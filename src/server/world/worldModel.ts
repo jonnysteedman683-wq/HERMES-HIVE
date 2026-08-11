@@ -81,6 +81,10 @@ export class WorldModel {
     return rel;
   }
 
+  public getEntities(): WorldEntity[] {
+    return Array.from(this.entities.values());
+  }
+
   /**
    * Query entities by filter
    */

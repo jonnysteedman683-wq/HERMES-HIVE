@@ -1,4 +1,5 @@
 import { GoogleGenAI } from '@google/genai';
+import { agentConfigManager } from './agentConfig';
 
 export interface LLMRequest {
   prompt: string;
@@ -99,6 +100,29 @@ class GeminiProvider {
     const startTime = Date.now();
     const modelToUse = request.model || this.defaultModel;
 
+    // 1. Check if Connected Hermes Agent AI is active and enabled
+    const agentSettings = agentConfigManager.getSettings();
+    if (agentSettings.isEnabled) {
+      try {
+        const result = await agentConfigManager.executeExternalCall(request.prompt, request.systemInstruction);
+        const latency = Date.now() - startTime;
+        const estimatedTokens = Math.ceil((request.prompt.length + result.text.length) / 4);
+
+        this.totalRequests++;
+        this.totalTokensUsed += estimatedTokens;
+        this.totalLatencyMs += latency;
+
+        return {
+          text: result.text,
+          tokensUsed: estimatedTokens,
+          latencyMs: latency,
+          modelUsed: result.modelUsed,
+        };
+      } catch (error: any) {
+        console.warn('[GeminiProvider] Failed to execute external call on connected Hermes Agent AI, falling back:', error?.message || error);
+      }
+    }
+
     // Refresh client if env changed
     if (!this.ai && this.hasApiKey()) {
       this.initClient();
@@ -130,7 +154,7 @@ class GeminiProvider {
         });
 
         const timeoutPromise = new Promise((_, reject) =>
-          setTimeout(() => reject(new Error('Gemini API call timed out (3s limit)')), 3000)
+          setTimeout(() => reject(new Error('Gemini API call timed out (15s limit)')), 15000)
         );
 
         const response = (await Promise.race([callPromise, timeoutPromise])) as any;

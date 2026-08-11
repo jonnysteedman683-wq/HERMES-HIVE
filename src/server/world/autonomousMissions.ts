@@ -190,20 +190,24 @@ export class AutonomousMissionEngine {
   private setupListeners(): void {
     // Listen for core mission events to synchronize progress
     messageBus.subscribeToType('MISSION_COMPLETED', (evt) => {
-      const payload = evt.payload;
+      const payload = evt.payload as Record<string, any> | undefined;
       const coreMissionId = payload?.missionId || payload?.id;
-      const matched = this.findByCoreRef(coreMissionId);
-      if (matched) {
-        this.updateMissionState(matched.missionId, 'COMPLETED');
+      if (coreMissionId && typeof coreMissionId === 'string') {
+        const matched = this.findByCoreRef(coreMissionId);
+        if (matched) {
+          this.updateMissionState(matched.missionId, 'COMPLETED');
+        }
       }
     });
 
     messageBus.subscribeToType('MISSION_FAILED', (evt) => {
-      const payload = evt.payload;
+      const payload = evt.payload as Record<string, any> | undefined;
       const coreMissionId = payload?.missionId || payload?.id;
-      const matched = this.findByCoreRef(coreMissionId);
-      if (matched) {
-        this.updateMissionState(matched.missionId, 'FAILED');
+      if (coreMissionId && typeof coreMissionId === 'string') {
+        const matched = this.findByCoreRef(coreMissionId);
+        if (matched) {
+          this.updateMissionState(matched.missionId, 'FAILED');
+        }
       }
     });
   }

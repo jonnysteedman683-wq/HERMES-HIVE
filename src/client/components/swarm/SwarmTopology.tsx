@@ -1,14 +1,40 @@
 import React, { useState } from 'react';
 import { Agent } from '../../../shared/types';
-import { Bot, Shield, Cpu, Activity, Zap, CheckCircle2, AlertTriangle, PauseCircle, XCircle } from 'lucide-react';
+import { 
+  Bot, 
+  Shield, 
+  Cpu, 
+  Activity, 
+  Zap, 
+  CheckCircle2, 
+  AlertTriangle, 
+  PauseCircle, 
+  XCircle, 
+  CheckSquare, 
+  Square, 
+  Layers, 
+  Check, 
+  X 
+} from 'lucide-react';
 
 interface SwarmTopologyProps {
   agents: Agent[];
+  selectedAgents?: Agent[];
   onSelectAgent: (agent: Agent) => void;
+  onSelectAgents?: (agents: Agent[]) => void;
 }
 
-export const SwarmTopology: React.FC<SwarmTopologyProps> = ({ agents, onSelectAgent }) => {
+export const SwarmTopology: React.FC<SwarmTopologyProps> = ({ 
+  agents, 
+  selectedAgents = [], 
+  onSelectAgent,
+  onSelectAgents 
+}) => {
   const [hoveredAgent, setHoveredAgent] = useState<Agent | null>(null);
+  const [isMultiSelectMode, setIsMultiSelectMode] = useState<boolean>(false);
+
+  // Selected Agent IDs array
+  const selectedAgentIds = selectedAgents.map((a) => a.id);
 
   // Group agents by cluster
   const clusterA = agents.filter((a) => a.clusterId === 'Cluster A' || !a.clusterId);
@@ -45,8 +71,62 @@ export const SwarmTopology: React.FC<SwarmTopologyProps> = ({ agents, onSelectAg
     }
   };
 
+  const handleAgentClick = (agent: Agent, event: React.MouseEvent) => {
+    const isMultiKey = event.shiftKey || event.ctrlKey || event.metaKey || isMultiSelectMode;
+
+    if (isMultiKey) {
+      setIsMultiSelectMode(true);
+      const exists = selectedAgentIds.includes(agent.id);
+      let updated: Agent[];
+      if (exists) {
+        updated = selectedAgents.filter((a) => a.id !== agent.id);
+      } else {
+        updated = [...selectedAgents, agent];
+      }
+      if (onSelectAgents) {
+        onSelectAgents(updated);
+      }
+      if (updated.length > 0) {
+        onSelectAgent(updated[updated.length - 1]);
+      }
+    } else {
+      if (onSelectAgents) {
+        onSelectAgents([agent]);
+      }
+      onSelectAgent(agent);
+    }
+  };
+
+  const handleSelectAll = () => {
+    setIsMultiSelectMode(true);
+    if (onSelectAgents) {
+      onSelectAgents([...agents]);
+    }
+    if (agents.length > 0) {
+      onSelectAgent(agents[0]);
+    }
+  };
+
+  const handleSelectCluster = (clusterName: string) => {
+    setIsMultiSelectMode(true);
+    const clusterAgents = agents.filter((a) => a.clusterId === clusterName || (clusterName === 'Cluster A' && !a.clusterId));
+    if (onSelectAgents) {
+      onSelectAgents(clusterAgents);
+    }
+    if (clusterAgents.length > 0) {
+      onSelectAgent(clusterAgents[0]);
+    }
+  };
+
+  const handleClearSelection = () => {
+    setIsMultiSelectMode(false);
+    if (onSelectAgents) {
+      onSelectAgents([]);
+    }
+  };
+
   return (
-    <div className="relative w-full h-[520px] bg-slate-950/90 rounded-2xl border border-slate-800/80 p-6 overflow-hidden flex flex-col justify-between shadow-2xl">
+    <div className="relative w-full h-[540px] bg-slate-950/90 rounded-2xl border border-slate-800/80 p-6 overflow-hidden flex flex-col justify-between shadow-2xl">
       {/* Background Cyber Grid */}
       <div
         className="absolute inset-0 pointer-events-none opacity-20"
@@ -57,8 +137,8 @@ export const SwarmTopology: React.FC<SwarmTopologyProps> = ({ agents, onSelectAg
         }}
       />
 
-      {/* Topology Header */}
-      <div className="relative z-10 flex items-center justify-between border-b border-slate-800/60 pb-3">
+      {/* Topology Header & Controls */}
+      <div className="relative z-10 flex flex-wrap items-center justify-between gap-3 border-b border-slate-800/60 pb-3">
         <div className="flex items-center gap-3">
           <div className="w-8 h-8 rounded-lg bg-cyan-500/10 border border-cyan-500/30 flex items-center justify-center text-cyan-400">
             <Zap className="w-4 h-4 animate-pulse" />
@@ -69,30 +149,66 @@ export const SwarmTopology: React.FC<SwarmTopologyProps> = ({ agents, onSelectAg
               <span className="text-[10px] px-2 py-0.5 rounded-full bg-cyan-950 text-cyan-400 border border-cyan-800/40 font-mono">
                 {agents.length} AGENTS ACTIVE
               </span>
+              {selectedAgentIds.length > 0 && (
+                <span className="text-[10px] px-2 py-0.5 rounded-full bg-emerald-950 text-emerald-300 border border-emerald-800/60 font-mono font-bold flex items-center gap-1 animate-pulse">
+                  <Check className="w-3 h-3 text-emerald-400" />
+                  {selectedAgentIds.length} SELECTED FOR BULK ACTION
+                </span>
+              )}
             </h3>
             <p className="text-[11px] text-slate-400 font-sans">
-              Dynamic multi-agent cluster hierarchy and command bus communication links.
+              Dynamic multi-agent cluster hierarchy. Click nodes or use multi-select mode for bulk management.
             </p>
           </div>
         </div>
 
-        {/* Legend */}
-        <div className="flex items-center gap-3 text-[11px] font-mono text-slate-400 bg-slate-900/80 px-3 py-1.5 rounded-lg border border-slate-800/80">
-          <div className="flex items-center gap-1.5">
-            <span className="w-2 h-2 rounded-full bg-cyan-400 animate-pulse" />
-            <span>Working</span>
-          </div>
-          <div className="flex items-center gap-1.5">
-            <span className="w-2 h-2 rounded-full bg-emerald-400" />
-            <span>Idle</span>
-          </div>
-          <div className="flex items-center gap-1.5">
-            <span className="w-2 h-2 rounded-full bg-amber-400" />
-            <span>Paused</span>
-          </div>
-          <div className="flex items-center gap-1.5">
-            <span className="w-2 h-2 rounded-full bg-red-400" />
-            <span>Failed</span>
+        {/* Multi-Select Action Tools */}
+        <div className="flex items-center gap-2 flex-wrap">
+          <button
+            onClick={() => setIsMultiSelectMode(!isMultiSelectMode)}
+            className={`px-2.5 py-1.5 rounded-lg border text-xs font-mono font-semibold flex items-center gap-1.5 transition-all ${
+              isMultiSelectMode
+                ? 'bg-cyan-500/20 text-cyan-300 border-cyan-500/50 shadow-sm shadow-cyan-500/20'
+                : 'bg-slate-900 text-slate-300 border-slate-800 hover:bg-slate-800'
+            }`}
+            title="Toggle multi-agent selection mode"
+          >
+            <Layers className="w-3.5 h-3.5 text-cyan-400" />
+            {isMultiSelectMode ? 'Multi-Select Active' : 'Multi-Select Mode'}
+          </button>
+
+          <button
+            onClick={handleSelectAll}
+            className="px-2.5 py-1.5 rounded-lg bg-slate-900 hover:bg-slate-800 border border-slate-800 text-slate-300 text-xs font-mono font-semibold transition-all flex items-center gap-1"
+          >
+            <CheckSquare className="w-3.5 h-3.5 text-emerald-400" />
+            Select All
+          </button>
+
+          {selectedAgentIds.length > 0 && (
+            <button
+              onClick={handleClearSelection}
+              className="px-2.5 py-1.5 rounded-lg bg-red-950/50 hover:bg-red-900/60 border border-red-800/50 text-red-300 text-xs font-mono font-semibold transition-all flex items-center gap-1"
+            >
+              <X className="w-3.5 h-3.5" />
+              Clear ({selectedAgentIds.length})
+            </button>
+          )}
+
+          {/* Legend */}
+          <div className="hidden xl:flex items-center gap-2.5 text-[10px] font-mono text-slate-400 bg-slate-900/80 px-2.5 py-1.5 rounded-lg border border-slate-800/80">
+            <div className="flex items-center gap-1">
+              <span className="w-2 h-2 rounded-full bg-cyan-400 animate-pulse" />
+              <span>Working</span>
+            </div>
+            <div className="flex items-center gap-1">
+              <span className="w-2 h-2 rounded-full bg-emerald-400" />
+              <span>Idle</span>
+            </div>
+            <div className="flex items-center gap-1">
+              <span className="w-2 h-2 rounded-full bg-amber-400" />
+              <span>Paused</span>
+            </div>
           </div>
         </div>
       </div>
@@ -150,22 +266,41 @@ export const SwarmTopology: React.FC<SwarmTopologyProps> = ({ agents, onSelectAg
           <div className="w-full grid grid-cols-3 gap-6 px-4">
             {/* Cluster A */}
             <div className="flex flex-col items-center bg-slate-900/60 p-3 rounded-xl border border-slate-800/80">
-              <div className="text-[11px] font-bold text-cyan-400 font-mono mb-2 flex items-center gap-1">
-                <Cpu className="w-3.5 h-3.5" /> CLUSTER A (Strategy & Research)
+              <div className="w-full flex items-center justify-between mb-2">
+                <div className="text-[11px] font-bold text-cyan-400 font-mono flex items-center gap-1">
+                  <Cpu className="w-3.5 h-3.5" /> CLUSTER A
+                </div>
+                <button
+                  onClick={() => handleSelectCluster('Cluster A')}
+                  className="text-[9px] font-mono text-cyan-400 hover:underline uppercase"
+                >
+                  Select Cluster
+                </button>
               </div>
               <div className="flex flex-wrap gap-2 justify-center">
                 {clusterA.map((agent) => {
                   const colors = getStatusColor(agent.status);
+                  const isSelected = selectedAgentIds.includes(agent.id);
                   return (
                     <div
                       key={agent.id}
-                      onClick={() => onSelectAgent(agent)}
+                      onClick={(e) => handleAgentClick(agent, e)}
                       onMouseEnter={() => setHoveredAgent(agent)}
                       onMouseLeave={() => setHoveredAgent(null)}
-                      className={`cursor-pointer group relative px-2.5 py-1.5 rounded-lg bg-slate-900 border border-slate-800 hover:border-cyan-500/60 flex items-center gap-2 transition-all ${colors.glow}`}
+                      className={`cursor-pointer group relative px-2.5 py-1.5 rounded-lg bg-slate-900 border flex items-center gap-2 transition-all ${
+                        isSelected
+                          ? 'border-cyan-400 ring-2 ring-cyan-400/50 bg-cyan-950/40 shadow-[0_0_20px_rgba(6,182,212,0.6)]'
+                          : 'border-slate-800 hover:border-cyan-500/60 ' + colors.glow
+                      }`}
                     >
-                      <div className={`w-2 h-2 rounded-full ${colors.bg}`} />
-                      <span className="text-[11px] font-medium text-slate-200">{agent.name.replace('Hermes-', '')}</span>
+                      {isSelected ? (
+                        <CheckSquare className="w-3.5 h-3.5 text-cyan-400" />
+                      ) : (
+                        <div className={`w-2 h-2 rounded-full ${colors.bg}`} />
+                      )}
+                      <span className={`text-[11px] font-medium ${isSelected ? 'text-white font-bold' : 'text-slate-200'}`}>
+                        {agent.name.replace('Hermes-', '')}
+                      </span>
                       {renderStatusIcon(agent.status)}
                     </div>
                   );
@@ -175,22 +310,41 @@ export const SwarmTopology: React.FC<SwarmTopologyProps> = ({ agents, onSelectAg
 
             {/* Cluster B */}
             <div className="flex flex-col items-center bg-slate-900/60 p-3 rounded-xl border border-slate-800/80">
-              <div className="text-[11px] font-bold text-blue-400 font-mono mb-2 flex items-center gap-1">
-                <Shield className="w-3.5 h-3.5" /> CLUSTER B (Engineering & Security)
+              <div className="w-full flex items-center justify-between mb-2">
+                <div className="text-[11px] font-bold text-blue-400 font-mono flex items-center gap-1">
+                  <Shield className="w-3.5 h-3.5" /> CLUSTER B
+                </div>
+                <button
+                  onClick={() => handleSelectCluster('Cluster B')}
+                  className="text-[9px] font-mono text-blue-400 hover:underline uppercase"
+                >
+                  Select Cluster
+                </button>
               </div>
               <div className="flex flex-wrap gap-2 justify-center">
                 {clusterB.map((agent) => {
                   const colors = getStatusColor(agent.status);
+                  const isSelected = selectedAgentIds.includes(agent.id);
                   return (
                     <div
                       key={agent.id}
-                      onClick={() => onSelectAgent(agent)}
+                      onClick={(e) => handleAgentClick(agent, e)}
                       onMouseEnter={() => setHoveredAgent(agent)}
                       onMouseLeave={() => setHoveredAgent(null)}
-                      className={`cursor-pointer group relative px-2.5 py-1.5 rounded-lg bg-slate-900 border border-slate-800 hover:border-blue-500/60 flex items-center gap-2 transition-all ${colors.glow}`}
+                      className={`cursor-pointer group relative px-2.5 py-1.5 rounded-lg bg-slate-900 border flex items-center gap-2 transition-all ${
+                        isSelected
+                          ? 'border-cyan-400 ring-2 ring-cyan-400/50 bg-cyan-950/40 shadow-[0_0_20px_rgba(6,182,212,0.6)]'
+                          : 'border-slate-800 hover:border-blue-500/60 ' + colors.glow
+                      }`}
                     >
-                      <div className={`w-2 h-2 rounded-full ${colors.bg}`} />
-                      <span className="text-[11px] font-medium text-slate-200">{agent.name.replace('Hermes-', '')}</span>
+                      {isSelected ? (
+                        <CheckSquare className="w-3.5 h-3.5 text-cyan-400" />
+                      ) : (
+                        <div className={`w-2 h-2 rounded-full ${colors.bg}`} />
+                      )}
+                      <span className={`text-[11px] font-medium ${isSelected ? 'text-white font-bold' : 'text-slate-200'}`}>
+                        {agent.name.replace('Hermes-', '')}
+                      </span>
                       {renderStatusIcon(agent.status)}
                     </div>
                   );
@@ -200,22 +354,41 @@ export const SwarmTopology: React.FC<SwarmTopologyProps> = ({ agents, onSelectAg
 
             {/* Cluster C */}
             <div className="flex flex-col items-center bg-slate-900/60 p-3 rounded-xl border border-slate-800/80">
-              <div className="text-[11px] font-bold text-purple-400 font-mono mb-2 flex items-center gap-1">
-                <Activity className="w-3.5 h-3.5" /> CLUSTER C (Verification & Healing)
+              <div className="w-full flex items-center justify-between mb-2">
+                <div className="text-[11px] font-bold text-purple-400 font-mono flex items-center gap-1">
+                  <Activity className="w-3.5 h-3.5" /> CLUSTER C
+                </div>
+                <button
+                  onClick={() => handleSelectCluster('Cluster C')}
+                  className="text-[9px] font-mono text-purple-400 hover:underline uppercase"
+                >
+                  Select Cluster
+                </button>
               </div>
               <div className="flex flex-wrap gap-2 justify-center">
                 {clusterC.map((agent) => {
                   const colors = getStatusColor(agent.status);
+                  const isSelected = selectedAgentIds.includes(agent.id);
                   return (
                     <div
                       key={agent.id}
-                      onClick={() => onSelectAgent(agent)}
+                      onClick={(e) => handleAgentClick(agent, e)}
                       onMouseEnter={() => setHoveredAgent(agent)}
                       onMouseLeave={() => setHoveredAgent(null)}
-                      className={`cursor-pointer group relative px-2.5 py-1.5 rounded-lg bg-slate-900 border border-slate-800 hover:border-purple-500/60 flex items-center gap-2 transition-all ${colors.glow}`}
+                      className={`cursor-pointer group relative px-2.5 py-1.5 rounded-lg bg-slate-900 border flex items-center gap-2 transition-all ${
+                        isSelected
+                          ? 'border-cyan-400 ring-2 ring-cyan-400/50 bg-cyan-950/40 shadow-[0_0_20px_rgba(6,182,212,0.6)]'
+                          : 'border-slate-800 hover:border-purple-500/60 ' + colors.glow
+                      }`}
                     >
-                      <div className={`w-2 h-2 rounded-full ${colors.bg}`} />
-                      <span className="text-[11px] font-medium text-slate-200">{agent.name.replace('Hermes-', '')}</span>
+                      {isSelected ? (
+                        <CheckSquare className="w-3.5 h-3.5 text-cyan-400" />
+                      ) : (
+                        <div className={`w-2 h-2 rounded-full ${colors.bg}`} />
+                      )}
+                      <span className={`text-[11px] font-medium ${isSelected ? 'text-white font-bold' : 'text-slate-200'}`}>
+                        {agent.name.replace('Hermes-', '')}
+                      </span>
                       {renderStatusIcon(agent.status)}
                     </div>
                   );
@@ -236,7 +409,9 @@ export const SwarmTopology: React.FC<SwarmTopologyProps> = ({ agents, onSelectAg
             <span>Tasks: <strong>{hoveredAgent.reputation.tasksCompleted}</strong></span>
           </div>
         ) : (
-          <div className="text-slate-500 italic">Click any node to inspect agent capabilities, reputation metrics, and control flags.</div>
+          <div className="text-slate-500 italic">
+            Click nodes to select agents for bulk controls, or shift-click / multi-select to target multiple agents.
+          </div>
         )}
       </div>
     </div>
