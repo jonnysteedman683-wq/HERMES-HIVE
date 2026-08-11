@@ -17,20 +17,29 @@ export class TaskRepository {
    * Insert or update a task record
    */
   upsert(task: TaskRecord): void {
+    const columns = [
+      'id', 'kind', 'agent_id', 'agent_role', 'agent_capabilities', 'mission_id',
+      'status', 'priority', 'prompt', 'system_prompt', 'output', 'error',
+      'retry_count', 'max_retries', 'timeout_ms', 'created_at', 'started_at',
+      'completed_at', 'tokens_used', 'latency_ms', 'model_used',
+      'verification_score', 'verification_comments', 'worker_pid',
+      'error_history', 'context', 'required_capabilities',
+      'tool_name', 'tool_args', 'retry_policy', 'updated_at',
+    ];
+    const placeholders = columns.map(() => '?').join(',');
     const stmt = this.db.prepare(`
-      INSERT INTO tasks (
-        id, kind, agent_id, mission_id, status, priority, prompt,
-        output, error, retry_count, max_retries, created_at, started_at,
-        completed_at, tokens_used, latency_ms, model_used,
-        verification_score, verification_comments, worker_pid,
-        error_history, context, required_capabilities,
-        tool_name, tool_args, timeout_ms, retry_policy
-      ) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)
+      INSERT INTO tasks (${columns.join(',')})
+      VALUES (${placeholders})
       ON CONFLICT(id) DO UPDATE SET
         status = excluded.status,
+        agent_role = excluded.agent_role,
+        agent_capabilities = excluded.agent_capabilities,
+        system_prompt = excluded.system_prompt,
         output = excluded.output,
         error = excluded.error,
         retry_count = excluded.retry_count,
+        max_retries = excluded.max_retries,
+        timeout_ms = excluded.timeout_ms,
         started_at = excluded.started_at,
         completed_at = excluded.completed_at,
         tokens_used = excluded.tokens_used,
@@ -40,21 +49,30 @@ export class TaskRepository {
         verification_comments = excluded.verification_comments,
         worker_pid = excluded.worker_pid,
         error_history = excluded.error_history,
-        context = excluded.context
+        context = excluded.context,
+        required_capabilities = excluded.required_capabilities,
+        tool_name = excluded.tool_name,
+        tool_args = excluded.tool_args,
+        retry_policy = excluded.retry_policy,
+        updated_at = excluded.updated_at
     `);
 
     stmt.run(
       task.taskId,
       task.kind,
       task.agentId || null,
+      task.agentRole || null,
+      JSON.stringify(task.agentCapabilities || []),
       task.context?.missionId || null,
       task.status,
       task.priority || 3,
       task.prompt,
+      task.systemPrompt || null,
       task.output || null,
       task.error || null,
       task.retryCount,
       task.retryPolicy?.maxRetries || 3,
+      task.timeoutMs || null,
       task.createdAt || new Date().toISOString(),
       task.startedAt || null,
       task.completedAt || null,
@@ -69,8 +87,8 @@ export class TaskRepository {
       JSON.stringify(task.requiredCapabilities || []),
       task.toolName || null,
       JSON.stringify(task.toolArgs || {}),
-      task.timeoutMs || null,
       JSON.stringify(task.retryPolicy || null),
+      new Date().toISOString(),
     );
   }
 
@@ -114,9 +132,10 @@ export class TaskRepository {
         ORDER BY priority ASC, created_at ASC
         LIMIT ?
       `;
-      params.unshift(...kinds);
-      params.push(process.pid);
-      params.push(limit);
+      // Replace the base params so they line up with the new placeholder order:
+      // kind IN (N ?), worker_pid = ?, LIMIT ?  ->  [kinds..., pid, limit]
+      params.length = 0;
+      params.push(...kinds, process.pid, limit);
     }
 
     const rows = this.db.prepare(sql).all(...params);

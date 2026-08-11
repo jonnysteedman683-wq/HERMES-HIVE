@@ -7,12 +7,16 @@ import { healingSupervisor } from '../healing/healingSupervisor';
 import { memoryService } from '../memory/memoryService';
 import { toolRegistry } from '../tools/toolRegistry';
 import { MissionRepository } from '../persistence/missionRepository';
+import { taskRunner } from '../tasks';
 
 class MissionEngine {
   private missions: Map<string, Mission> = new Map();
   private missionRepository = new MissionRepository();
   private maxConcurrency = 4;
   private runningTaskCount = 0;
+  // Route mission tasks through the distributed task queue (TaskRunnerService + TaskWorker).
+  // Falls back to the legacy inline executor if queue submission/await fails.
+  private useTaskQueue = true;
 
   public createMission(params: {
     objective: string;
@@ -153,6 +157,15 @@ class MissionEngine {
     task.status = 'running';
     task.startedAt = new Date().toISOString();
     mission.updatedAt = new Date().toISOString();
+
+    if (this.useTaskQueue) {
+      try {
+        return await this.dispatchViaQueue(mission, task);
+      } catch (err) {
+        console.error(`[MissionEngine] Queue dispatch failed for task ${task.id}, falling back to inline:`, err);
+        // Falls through to legacy inline execution below.
+      }
+    }
 
     // Select agent
     let agent = agentRegistry.findAvailableAgent(task.requiredRole, task.requiredCapabilities);
@@ -296,6 +309,74 @@ Maintain highest quality standards.`;
       this.runningTaskCount--;
       this.updateMissionProgress(mission);
       this.scheduleNextTasks();
+    }
+  }
+
+  private async dispatchViaQueue(mission: Mission, task: MissionTask) {
+    const toolName = this.matchToolForTask(task);
+    const kind: 'agent_tool' | 'agent_llm' = toolName ? 'agent_tool' : 'agent_llm';
+
+    const taskId = await taskRunner.createTask({
+      kind,
+      prompt: task.description,
+      agentRole: task.requiredRole,
+      requiredCapabilities: task.requiredCapabilities,
+      context: { missionId: mission.id, objective: mission.objective, taskId: task.id },
+      timeoutMs: 120000,
+      priority: mission.priority,
+    });
+
+    task.externalTaskId = taskId;
+    messageBus.publish('TASK_ASSIGNMENT', 'MissionEngine', {
+      taskId,
+      missionId: mission.id,
+      taskTitle: task.title,
+      kind,
+      queued: true,
+    }, { missionId: mission.id, taskId: task.id, severity: 'info' });
+
+    const result = await taskRunner.awaitResult(taskId, 120000);
+
+    if (result.status === 'completed') {
+      task.result = result.output;
+      task.status = 'completed';
+      task.verified = result.verificationScore !== undefined && result.verificationScore >= 0.5;
+      task.verificationComments = result.verificationComments;
+      task.completedAt = result.completedAt;
+
+      messageBus.publish('TASK_RESULT', 'MissionEngine', {
+        taskId: task.id,
+        externalTaskId: taskId,
+        missionId: mission.id,
+        taskTitle: task.title,
+        verificationScore: result.verificationScore,
+        outputSnippet: (result.output || '').slice(0, 150) + '...',
+      }, { missionId: mission.id, taskId: task.id, severity: 'success' });
+    } else {
+      task.status = 'failed';
+      task.error = result.error;
+
+      messageBus.publish('TASK_FAILURE', 'MissionEngine', {
+        taskId: task.id,
+        externalTaskId: taskId,
+        missionId: mission.id,
+        taskTitle: task.title,
+        reason: result.error,
+      }, { missionId: mission.id, taskId: task.id, severity: 'warning' });
+
+      await healingSupervisor.recoverTaskFailure(
+        task,
+        result.error || 'queued task failed',
+        async (t) => {
+          t.status = 'pending';
+          setTimeout(() => this.scheduleNextTasks(), 200);
+        },
+        async (t, newAgentId) => {
+          t.assignedAgentId = newAgentId;
+          t.status = 'pending';
+          setTimeout(() => this.scheduleNextTasks(), 200);
+        }
+      );
     }
   }
 

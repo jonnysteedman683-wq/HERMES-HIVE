@@ -87,6 +87,7 @@ import { suprimeBridge } from './suprime/suprimeBridge';
 import { backendRegistry } from './backends/backendRegistry';
 import { OmnibusBackendAdapter } from './backends/omnibusAdapter';
 import { llmProvider, resetLlmProvider, geminiProvider, createLlmProvider } from './llm/llmProvider';
+import { taskRunner, TaskWorker } from './tasks';
 import { HiveEvent } from '../shared/types';
 import { causalEvaluationEngine } from './learning/causalEvaluationEngine';
 import { causalEvaluationEngine } from './learning/causalEvaluationEngine';
@@ -201,6 +202,15 @@ export function apiMiddleware(): Plugin {
   return {
     name: 'hermes-hive-api-middleware',
     configureServer(server) {
+      // Bootstrap the distributed task-queue worker so queued tasks actually execute.
+      // Runs locally in-process; configurable via HERMES_WORKER_CONCURRENCY.
+      try {
+        const worker = new TaskWorker();
+        worker.start();
+      } catch (err) {
+        console.error('[ApiMiddleware] Failed to start TaskWorker:', err);
+      }
+
       server.middlewares.use(async (req: Connect.IncomingMessage, res: any, next: Connect.NextFunction) => {
         const url = req.url || '';
 
@@ -413,6 +423,51 @@ export function apiMiddleware(): Plugin {
               tasks: body.tasks,
             });
             return jsonResponse({ mission });
+          }
+
+          // 6b. Task Queue REST (distributed execution layer)
+          if (url === '/api/tasks' && method === 'GET') {
+            const statusHeader = (req.headers['x-task-status'] as string) || undefined;
+            const filter = statusHeader
+              ? { status: statusHeader as import('../shared/types').TaskQueueStatus }
+              : undefined;
+            return jsonResponse({
+              tasks: taskRunner.listTasks(filter),
+              stats: taskRunner.getStats(),
+              workers: taskRunner.getWorkers(),
+            });
+          }
+
+          if (url === '/api/tasks' && method === 'POST') {
+            const body = await getBody();
+            if (!body.kind || !body.prompt) {
+              return jsonResponse({ error: 'Invalid task payload: kind and prompt required' }, 400);
+            }
+            const taskId = await taskRunner.createTask({
+              kind: body.kind,
+              prompt: body.prompt,
+              agentRole: body.agentRole,
+              agentId: body.agentId,
+              requiredCapabilities: body.requiredCapabilities,
+              systemPrompt: body.systemPrompt,
+              context: body.context || {},
+              timeoutMs: body.timeoutMs,
+              priority: body.priority,
+            });
+            return jsonResponse({ taskId });
+          }
+
+          if (url.startsWith('/api/tasks/') && method === 'GET') {
+            const taskId = url.split('/')[3];
+            const task = taskRunner.getTask(taskId);
+            if (!task) return jsonResponse({ error: 'Task not found' }, 404);
+            return jsonResponse({ task });
+          }
+
+          if (url.startsWith('/api/tasks/') && url.endsWith('/cancel') && method === 'POST') {
+            const taskId = url.split('/')[3];
+            const cancelled = await taskRunner.cancelTask(taskId);
+            return jsonResponse({ cancelled });
           }
 
           // 7. Memory REST
