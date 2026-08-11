@@ -1,0 +1,6 @@
+{
+  "name": "Hermes Hive",
+  "description": "Autonomous Multi-Agent Swarm Control Platform",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
