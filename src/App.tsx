@@ -23,6 +23,8 @@ import { SelfModelCenter } from './client/components/selfmodel/SelfModelCenter';
 import { EvolutionCenter } from './client/components/evolution/EvolutionCenter';
 import { EvolutionObservatory } from './client/components/collective/EvolutionObservatory';
 import { HermesWebConsole } from './client/components/web/HermesWebConsole';
+import { SuprimeSwarmView } from './client/components/suprime/SuprimeSwarmView';
+import { BackendsView } from './client/components/backends/BackendsView';
 import { Agent } from './shared/types';
 
 export default function App() {
@@ -50,7 +52,6 @@ export default function App() {
     applyBulkAgentAction,
   } = useHiveData();
 
-  // Register global hotkeys hook
   useKeyboardShortcuts({
     onNavigateTab: (tab) => setActiveTab(tab),
     onToggleShortcuts: () => setIsShortcutsOpen((prev) => !prev),
@@ -103,7 +104,6 @@ export default function App() {
 
   return (
     <div className="flex h-screen w-screen bg-slate-950 text-slate-100 font-sans overflow-hidden antialiased select-none relative">
-      {/* Sidebar Navigation */}
       <Sidebar
         activeTab={activeTab}
         setActiveTab={setActiveTab}
@@ -111,9 +111,7 @@ export default function App() {
         activeMissionsCount={activeMissionsCount}
       />
 
-      {/* Main Content Area */}
       <div className="flex-1 flex flex-col min-w-0 h-full overflow-hidden">
-        {/* Header Control Bar */}
         <Header
           connected={connected}
           hiveHealthPct={hiveHealthPct}
@@ -123,7 +121,6 @@ export default function App() {
           commandInputRef={commandInputRef}
         />
 
-        {/* Tab View Container */}
         <main className="flex-1 p-6 overflow-hidden bg-slate-900/40 relative">
           {activeTab === 'dashboard' && (
             <HiveDashboard
@@ -180,6 +177,10 @@ export default function App() {
             </div>
           )}
 
+          {activeTab === 'suprime' && <SuprimeSwarmView />}
+
+          {activeTab === 'backends' && <BackendsView />}
+
           {activeTab === 'memory' && (
             <MemoryExplorer records={memoryRecords} onRefresh={refresh} />
           )}
@@ -198,13 +199,11 @@ export default function App() {
         </main>
       </div>
 
-      {/* Global Context-Aware Floating "Ask Hermes" Action Cards Widget */}
       <AskHermesFloatingWidget
         activeTab={activeTab}
         onAskHermes={handleAskHermesFromWidget}
       />
 
-      {/* Slide-over Agent Inspector Drawer */}
       <AgentInspector
         agent={selectedAgent}
         agents={agents}
@@ -218,7 +217,6 @@ export default function App() {
         onSelectAgents={handleSelectAgents}
       />
 
-      {/* Global Swarm Keyboard Shortcuts Modal */}
       <KeyboardShortcutsModal
         isOpen={isShortcutsOpen}
         onClose={() => setIsShortcutsOpen(false)}

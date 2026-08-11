@@ -49,95 +49,86 @@ export class ConnectorRuntime {
 
   private async executeSearch(params: { query: string; maxResults?: number }) {
     const max = params.maxResults || 5;
-    const mockResults = [
-      {
-        title: `HERMES Ecosystem Architecture Guide for "${params.query}"`,
-        snippet: `Comprehensive integration patterns for HERMES HIVE multi-agent swarm and HERMES WEB capability connector fabric.`,
-        url: `https://hermes.ai/docs/capabilities/${encodeURIComponent(params.query)}`,
-        relevanceScore: 0.98,
-      },
-      {
-        title: `Swarm Coordination & Autonomous Capability Execution`,
-        snippet: `Evaluating policy constraints, risk levels, and distributed trace contexts across agent boundaries.`,
-        url: `https://hermes.ai/spec/hive-web-protocol`,
-        relevanceScore: 0.92,
-      },
-      {
-        title: `Distributed Verification & Audit Ledger`,
-        snippet: `Immutable verification protocols for post-execution state checking and consensus validation.`,
-        url: `https://hermes.ai/audit/verification`,
-        relevanceScore: 0.88,
-      },
-    ];
-
-    return {
-      query: params.query,
-      totalFound: mockResults.length,
-      results: mockResults.slice(0, max),
-      timestamp: new Date().toISOString(),
-    };
+    throw new Error('web.search is not yet bound to a real search provider. Configure a provider or use Hermes web search.');
   }
 
-  private async executeHttpRequest(operation: string, params: { url: string; method?: string; headers?: any; body?: any }) {
+  private async executeHttpRequest(operation: string, params: { url: string; method?: string; headers?: any; body?: any; timeoutMs?: number }) {
     const method = (params.method || operation || 'GET').toUpperCase();
-    const url = params.url || 'https://api.hermes.internal/v1/health';
+    const url = params.url;
+    if (!url) {
+      throw new Error('http_request requires a URL');
+    }
 
-    return {
-      statusCode: 200,
-      statusText: 'OK',
-      url,
-      method,
-      headers: {
-        'content-type': 'application/json',
-        'x-hermes-connector': 'hermes-web-http-v1',
-      },
-      data: {
-        success: true,
-        endpoint: url,
-        receivedPayload: params.body || null,
-        message: `HTTP ${method} call executed successfully through HERMES WEB connector gateway.`,
-        timestamp: new Date().toISOString(),
-      },
-    };
+    const controller = new AbortController();
+    const timeoutMs = params.timeoutMs || 10000;
+    const timeout = setTimeout(() => controller.abort(), timeoutMs);
+
+    try {
+      const response = await fetch(url, {
+        method,
+        headers: params.headers || {},
+        body: params.body ? JSON.stringify(params.body) : undefined,
+        signal: controller.signal,
+      });
+      clearTimeout(timeout);
+
+      const contentType = response.headers.get('content-type') || 'application/octet-stream';
+      let data: any = null;
+      if (contentType.includes('application/json')) {
+        data = await response.json();
+      } else {
+        data = await response.text();
+      }
+
+      return {
+        statusCode: response.status,
+        statusText: response.statusText,
+        url: response.url,
+        method,
+        headers: Object.fromEntries(response.headers.entries()),
+        data,
+      };
+    } catch (err) {
+      clearTimeout(timeout);
+      const message = err instanceof Error ? err.message : String(err);
+      throw new Error(`HTTP ${method} ${url} failed: ${message}`);
+    }
   }
 
   private async executeRepoRead(operation: string, params: { repoPath?: string; filePath?: string }) {
     const targetFile = params.filePath || 'package.json';
-    let content = '';
-    let exists = false;
-
-    try {
-      const fullPath = path.resolve(process.cwd(), targetFile);
-      if (fs.existsSync(fullPath) && fs.statSync(fullPath).isFile()) {
-        content = fs.readFileSync(fullPath, 'utf-8');
-        exists = true;
-      }
-    } catch {
-      exists = false;
+    const fullPath = path.resolve(process.cwd(), targetFile);
+    if (!fs.existsSync(fullPath) || !fs.statSync(fullPath).isFile()) {
+      throw new Error(`Repository file not found: ${fullPath}`);
     }
 
-    if (!exists) {
-      content = `// Simulated repository file: ${targetFile}\n{\n  "name": "hermes-repository-module",\n  "status": "synchronized"\n}`;
-    }
-
+    const content = fs.readFileSync(fullPath, 'utf-8');
     return {
       filePath: targetFile,
-      exists,
+      exists: true,
       content,
-      sizeBytes: content.length,
-      lastModified: new Date().toISOString(),
+      sizeBytes: Buffer.byteLength(content, 'utf-8'),
+      lastModified: new Date(fs.statSync(fullPath).mtime).toISOString(),
     };
   }
 
   private async executeRepoWrite(operation: string, params: { filePath: string; content: string; commitMessage?: string }) {
-    const hash = `commit_${Date.now()}_${Math.random().toString(36).substring(2, 8)}`;
+    const targetFile = params.filePath;
+    if (!targetFile) {
+      throw new Error('repository_write requires filePath');
+    }
+
+    const fullPath = path.resolve(process.cwd(), targetFile);
+    fs.mkdirSync(path.dirname(fullPath), { recursive: true });
+    fs.writeFileSync(fullPath, params.content, 'utf-8');
+
     return {
       success: true,
-      filePath: params.filePath,
-      bytesWritten: params.content.length,
-      commitHash: hash,
-      branch: 'main',
-      commitMessage: params.commitMessage || `feat(hermes-web): auto update ${params.filePath}`,
+      filePath: targetFile,
+      bytesWritten: Buffer.byteLength(params.content, 'utf-8'),
+      commitHash: null,
+      branch: null,
+      commitMessage: params.commitMessage || `feat(connector): update ${targetFile}`,
       timestamp: new Date().toISOString(),
     };
   }

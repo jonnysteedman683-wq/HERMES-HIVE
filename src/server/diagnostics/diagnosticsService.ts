@@ -1,7 +1,7 @@
 import { DiagnosticsMetrics } from '../../shared/types';
 import { agentRegistry } from '../registry/agentRegistry';
 import { missionEngine } from '../missions/missionEngine';
-import { geminiProvider } from '../gemini/geminiProvider';
+import { geminiProvider, llmProvider } from '../llm/llmProvider';
 import { memoryService } from '../memory/memoryService';
 import { messageBus } from '../bus/messageBus';
 import { healingSupervisor } from '../healing/healingSupervisor';
@@ -38,8 +38,8 @@ class DiagnosticsService {
     const hiveHealthPct = Math.round((agentHealthPct * 0.5) + (missionSuccessRatePct * 0.5));
     const uptimeSeconds = Math.floor((Date.now() - this.startTime) / 1000);
 
-    const avgAiLatencyMs = geminiProvider.totalRequests > 0
-      ? Math.round(geminiProvider.totalLatencyMs / geminiProvider.totalRequests)
+    const avgAiLatencyMs = llmProvider.totalRequests > 0
+      ? Math.round(llmProvider.totalLatencyMs / llmProvider.totalRequests)
       : 320;
 
     return {
@@ -53,11 +53,12 @@ class DiagnosticsService {
       failedAgentsCount: failedAgents.length,
       messageThroughputPerMin: Math.min(180, events.length * 3),
       memoryRecordsCount: memoryService.count(),
-      totalAiRequests: geminiProvider.totalRequests,
-      totalTokensUsed: geminiProvider.totalTokensUsed,
+      totalAiRequests: llmProvider.totalRequests,
+      totalTokensUsed: llmProvider.totalTokensUsed,
       avgAiLatencyMs,
       recoveryCount: healingSupervisor.totalRecoveries,
       uptimeSeconds,
+      providerName: (llmProvider as any).providerName || 'gemini',
     };
   }
 }

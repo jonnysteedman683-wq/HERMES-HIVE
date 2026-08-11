@@ -53,18 +53,30 @@ class ToolRegistry {
           };
         }
         try {
-          // Return simulated structured data for safety in sandbox
+          const url = input.url;
+          if (!url) throw new Error('Missing URL for http_get');
+
+          const controller = new AbortController();
+          const timeout = setTimeout(() => controller.abort(), 10000);
+          let response: Response;
+          try {
+            response = await fetch(url, { method: 'GET', signal: controller.signal });
+          } finally {
+            clearTimeout(timeout);
+          }
+
+          const contentType = response.headers.get('content-type') || 'application/octet-stream';
+          const data = contentType.includes('application/json')
+            ? await response.json()
+            : await response.text();
+
           return {
-            success: true,
+            success: response.ok,
             output: {
-              status: 200,
-              url: input.url,
-              contentType: 'application/json',
-              data: {
-                message: `Successfully connected to ${input.url}`,
-                timestamp: new Date().toISOString(),
-                payload: { status: 'operational', endpoints: ['/api/v1/data', '/api/v1/health'] },
-              },
+              status: response.status,
+              url: response.url,
+              contentType,
+              data,
             },
             executionTimeMs: Date.now() - start,
           };

@@ -46,7 +46,6 @@ class GeminiProvider {
         this.ai = null;
       }
     } else {
-      console.log('[GeminiProvider] GEMINI_API_KEY not set or placeholder. Operating with internal AI reasoning engine.');
       this.ai = null;
     }
   }

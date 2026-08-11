@@ -1,14 +1,16 @@
 import { Agent, Mission, MissionResult, MissionStatus, MissionTask, TaskStatus } from '../../shared/types';
 import { agentRegistry } from '../registry/agentRegistry';
 import { messageBus } from '../bus/messageBus';
-import { geminiProvider } from '../gemini/geminiProvider';
+import { geminiProvider, llmProvider } from '../llm/llmProvider';
 import { verificationEngine } from '../verifier/verificationEngine';
 import { healingSupervisor } from '../healing/healingSupervisor';
 import { memoryService } from '../memory/memoryService';
 import { toolRegistry } from '../tools/toolRegistry';
+import { MissionRepository } from '../persistence/missionRepository';
 
 class MissionEngine {
   private missions: Map<string, Mission> = new Map();
+  private missionRepository = new MissionRepository();
   private maxConcurrency = 4;
   private runningTaskCount = 0;
 
@@ -82,6 +84,7 @@ class MissionEngine {
     };
 
     this.missions.set(missionId, mission);
+    this.missionRepository.upsert(mission);
 
     messageBus.publish('MISSION_CREATED', 'MissionEngine', {
       missionId,

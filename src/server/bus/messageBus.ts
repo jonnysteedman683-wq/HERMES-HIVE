@@ -9,7 +9,7 @@ export interface BusFilter {
   taskId?: string;
   agentId?: string;
   source?: string;
-  severity?: 'info' | 'success' | 'warning' | 'error';
+  severity?: 'info' | 'success' | 'warning' | 'error' | 'critical';
   pattern?: string; // Wildcard topic matcher e.g. 'TASK_*', 'AGENT_*', '*'
   customPredicate?: (event: HiveEvent) => boolean;
 }
@@ -64,7 +64,7 @@ export interface PublishOptions {
   missionId?: string;
   taskId?: string;
   agentId?: string;
-  severity?: 'info' | 'success' | 'warning' | 'error';
+  severity?: 'info' | 'success' | 'warning' | 'error' | 'critical';
   requireAck?: boolean;
 }
 

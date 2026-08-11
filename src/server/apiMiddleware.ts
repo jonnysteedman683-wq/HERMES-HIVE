@@ -15,6 +15,17 @@ import { selfEvaluationEngine } from './learning/selfEvaluationEngine';
 import { swarmLearning } from './learning/swarmLearning';
 import { resourceManager } from './resources/resourceManager';
 import { hiveEventLedger } from './ledger/hiveEventLedger';
+import { EventRepository } from './persistence/eventRepository';
+
+const eventRepository = new EventRepository();
+messageBus.use((event) => {
+  try {
+    eventRepository.insert(event);
+  } catch {
+    // Persistence must not break event flow
+  }
+  return event;
+});
 import { autonomousLoop } from './hermes/autonomousLoop';
 import { hiveRegistry } from './federation/hiveRegistry';
 import { federationProtocol } from './federation/federationProtocol';
@@ -72,13 +83,50 @@ import { webCapabilityClient } from './hermes/webCapabilityClient';
 import { deepDiagnosticsEngine } from './diagnostics/deepDiagnosticsEngine';
 import { chatEngine } from './hermes/chatEngine';
 import { agentConfigManager } from './gemini/agentConfig';
+import { suprimeBridge } from './suprime/suprimeBridge';
+import { backendRegistry } from './backends/backendRegistry';
+import { OmnibusBackendAdapter } from './backends/omnibusAdapter';
+import { llmProvider, resetLlmProvider, geminiProvider, createLlmProvider } from './llm/llmProvider';
 import { HiveEvent } from '../shared/types';
+import { causalEvaluationEngine } from './learning/causalEvaluationEngine';
 import { causalEvaluationEngine } from './learning/causalEvaluationEngine';
 import { reputationEngine } from './learning/reputationEngine';
 import { capabilityEvolutionEngine } from './learning/capabilityEvolutionEngine';
 import { symbioticSynthesisEngine } from './learning/symbioticSynthesisEngine';
 import { holographicMemoryFusion } from './learning/holographicMemoryFusion';
 
+backendRegistry.register({
+  name: 'suprime',
+  adapter: {
+    name: 'suprime',
+    async health() {
+      return suprimeBridge.health();
+    },
+    async start() {
+      return suprimeBridge.startSwarm();
+    },
+    async stop() {
+      return suprimeBridge.stopSwarm();
+    },
+    async status() {
+      return suprimeBridge.status();
+    },
+    async submitTask(payload: { kind: string; args?: Record<string, unknown>; taskId?: string }) {
+      return suprimeBridge.submitTask(payload.kind, payload.args, payload.taskId);
+    },
+    async listTasks() {
+      return suprimeBridge.listTasks();
+    },
+    async registerWorker(kind: string) {
+      return suprimeBridge.registerWorker(kind);
+    },
+  },
+});
+
+backendRegistry.register({
+  name: 'omnibus',
+  adapter: new OmnibusBackendAdapter(),
+});
 
 interface QuickActionLog {
   id: string;
@@ -269,6 +317,14 @@ export function apiMiddleware(): Plugin {
             }
 
             const result = await hermesEngine.processHumanCommand(command);
+
+            // Mirror the command as a SUPRIME task so both systems track the same work
+            try {
+              await suprimeBridge.submitTask('hermes_command', { command, result: result as Record<string, unknown> });
+            } catch {
+              // Swallow mirror errors — Hermes remains authoritative
+            }
+
             return jsonResponse(result);
           }
 
@@ -1653,6 +1709,212 @@ export function apiMiddleware(): Plugin {
             return jsonResponse({ success: ok, hologram: holographicMemoryFusion.getHologram() });
           }
 
+
+          // 110. POST /api/suprime/worker/:kind — Register a SUPRIME worker kind
+          if (url.startsWith('/api/suprime/worker/') && method === 'POST') {
+            const kind = url.split('/')[4];
+            try {
+              const result = await suprimeBridge.registerWorker(kind);
+              return jsonResponse({ success: true, kind, result });
+            } catch (err) {
+              return jsonResponse({ error: 'SUPRIME worker registration failed', message: err instanceof Error ? err.message : String(err) }, 502);
+            }
+          }
+
+          // 111. SUPRIME swarm lifecycle
+          if (url === '/api/suprime/health' && method === 'GET') {
+            try {
+              const result = await suprimeBridge.health();
+              return jsonResponse(result);
+            } catch (err) {
+              return jsonResponse({ error: 'SUPRIME bridge unreachable', message: err instanceof Error ? err.message : String(err) }, 502);
+            }
+          }
+
+          if (url === '/api/suprime/swarm/start' && method === 'POST') {
+            try {
+              const result = await suprimeBridge.startSwarm();
+              return jsonResponse(result);
+            } catch (err) {
+              return jsonResponse({ error: 'Failed to start SUPRIME swarm', message: err instanceof Error ? err.message : String(err) }, 502);
+            }
+          }
+
+          if (url === '/api/suprime/swarm/stop' && method === 'POST') {
+            try {
+              const result = await suprimeBridge.stopSwarm();
+              return jsonResponse(result);
+            } catch (err) {
+              return jsonResponse({ error: 'Failed to stop SUPRIME swarm', message: err instanceof Error ? err.message : String(err) }, 502);
+            }
+          }
+
+          if (url === '/api/suprime/status' && method === 'GET') {
+            try {
+              const result = await suprimeBridge.status();
+              return jsonResponse(result);
+            } catch (err) {
+              return jsonResponse({ error: 'Failed to get SUPRIME status', message: err instanceof Error ? err.message : String(err) }, 502);
+            }
+          }
+
+          // 112. SUPRIME task management
+          if (url === '/api/suprime/tasks' && method === 'GET') {
+            try {
+              const result = await suprimeBridge.listTasks();
+              return jsonResponse(result);
+            } catch (err) {
+              return jsonResponse({ error: 'Failed to list SUPRIME tasks', message: err instanceof Error ? err.message : String(err) }, 502);
+            }
+          }
+
+          if (url === '/api/suprime/tasks/submit' && method === 'POST') {
+            const body = await getBody();
+            try {
+              const result = await suprimeBridge.submitTask(
+                body.kind || body.task || 'generic',
+                body.args || {},
+                body.task_id || body.taskId
+              );
+              return jsonResponse(result);
+            } catch (err) {
+              return jsonResponse({ error: 'Failed to submit SUPRIME task', message: err instanceof Error ? err.message : String(err) }, 502);
+            }
+          }
+
+          // Unified backend registry routes
+          if (url === '/api/backends' && method === 'GET') {
+            return jsonResponse({ backends: backendRegistry.list() });
+          }
+
+          if (url.startsWith('/api/backends/') && method === 'GET') {
+            const name = url.split('/')[3];
+            const adapter = backendRegistry.get(name);
+            if (!adapter) {
+              return jsonResponse({ error: 'Backend not found', name }, 404);
+            }
+            const result = await adapter.health();
+            return jsonResponse({ backend: name, health: result });
+          }
+
+          if (url.startsWith('/api/backends/') && method === 'POST') {
+            const name = url.split('/')[3];
+            const adapter = backendRegistry.get(name);
+            if (!adapter) {
+              return jsonResponse({ error: 'Backend not found', name }, 404);
+            }
+            const body = await getBody();
+            if (url.includes('/start')) {
+              const result = adapter.start ? await adapter.start() : { status: 'unsupported' };
+              return jsonResponse(result);
+            }
+            if (url.includes('/stop')) {
+              const result = adapter.stop ? await adapter.stop() : { status: 'unsupported' };
+              return jsonResponse(result);
+            }
+            if (url.includes('/status')) {
+              const result = adapter.status ? await adapter.status() : { status: 'unknown' };
+              return jsonResponse(result);
+            }
+            if (url.includes('/tasks/submit')) {
+              const result = adapter.submitTask ? await adapter.submitTask(body || {}) : { status: 'unsupported' };
+              return jsonResponse(result);
+            }
+            if (url.includes('/tasks')) {
+              const result = adapter.listTasks ? await adapter.listTasks() : { status: 'unsupported', tasks: [] };
+              return jsonResponse(result);
+            }
+            if (url.includes('/workers/')) {
+              const kind = url.split('/').pop() || 'generic';
+              const result = adapter.registerWorker ? await adapter.registerWorker(kind) : { status: 'unsupported' };
+              return jsonResponse(result);
+            }
+            return jsonResponse({ error: 'Unsupported backend action', url }, 400);
+          }
+
+          // 113. Settings / LLM Provider Management
+          if (url === '/api/settings' && method === 'GET') {
+            const current = llmProvider.providerName || 'gemini';
+            const currentDefaultModel = (llmProvider as any).defaultModel
+              || (current === 'ollama' ? (process.env.OLLAMA_MODEL || 'llama3.2')
+              : current === 'lmstudio' ? (process.env.LM_STUDIO_MODEL || 'lmstudio-model')
+              : current === 'groq' ? (process.env.GROQ_MODEL || 'llama-3.1-8b-instant')
+              : current === 'openai' ? (process.env.OPENAI_MODEL || 'gpt-4o-mini')
+              : process.env.GEMINI_MODEL || 'gemini-3.6-flash');
+            return jsonResponse({
+              currentProvider: current,
+              provider: current,
+              defaultModel: currentDefaultModel,
+              availableProviders: [
+                { id: 'gemini', name: 'Google Gemini', requiresKey: true, hasKey: geminiProvider.hasApiKey() },
+                { id: 'openai', name: 'OpenAI', requiresKey: true, hasKey: !!process.env.OPENAI_API_KEY },
+                { id: 'ollama', name: 'Ollama (Local)', requiresKey: false, hasKey: true, baseUrl: process.env.OLLAMA_BASE_URL || 'http://localhost:11434', defaultModel: process.env.OLLAMA_MODEL || 'llama3.2' },
+                { id: 'lmstudio', name: 'LM Studio (Local)', requiresKey: false, hasKey: !!process.env.LM_STUDIO_BASE_URL, baseUrl: process.env.LM_STUDIO_BASE_URL || 'http://localhost:1234', defaultModel: process.env.LM_STUDIO_MODEL || 'lmstudio-model' },
+                { id: 'groq', name: 'Groq (Free)', requiresKey: true, hasKey: !!process.env.GROQ_API_KEY },
+              ],
+              metrics: {
+                totalRequests: llmProvider.totalRequests,
+                totalTokensUsed: llmProvider.totalTokensUsed,
+                avgLatencyMs: llmProvider.totalRequests > 0 ? Math.round(llmProvider.totalLatencyMs / llmProvider.totalRequests) : 0,
+              },
+            });
+          }
+
+          if (url === '/api/settings' && method === 'POST') {
+            const body = await getBody();
+            const provider = (body.provider || 'gemini') as 'gemini' | 'openai' | 'ollama' | 'lmstudio' | 'groq';
+            const model = body.model as string | undefined;
+
+            try {
+              let newProvider;
+              switch (provider) {
+                case 'openai':
+                  newProvider = createLlmProvider({
+                    provider: 'openai',
+                    baseUrl: body.baseUrl,
+                    apiKey: body.apiKey,
+                    defaultModel: model,
+                  });
+                  break;
+                case 'ollama':
+                  newProvider = createLlmProvider({
+                    provider: 'ollama',
+                    baseUrl: body.baseUrl,
+                    defaultModel: model,
+                  });
+                  break;
+                case 'lmstudio':
+                  newProvider = createLlmProvider({
+                    provider: 'lmstudio',
+                    baseUrl: body.baseUrl,
+                    defaultModel: model,
+                  });
+                  break;
+                case 'groq':
+                  newProvider = createLlmProvider({
+                    provider: 'groq',
+                    apiKey: body.apiKey,
+                    defaultModel: model,
+                  });
+                  break;
+                default:
+                  newProvider = createLlmProvider({ provider: 'gemini' });
+                  break;
+              }
+              resetLlmProvider({ provider, baseUrl: body.baseUrl, apiKey: body.apiKey, defaultModel: model });
+              return jsonResponse({
+                success: true,
+                provider: newProvider.providerName,
+                message: `Switched to ${newProvider.providerName} provider`,
+                metrics: {
+                  totalRequests: llmProvider.totalRequests,
+                  totalTokensUsed: llmProvider.totalTokensUsed,
+                },
+              });
+            } catch (err) {
+              return jsonResponse({ error: 'Failed to switch provider', message: err instanceof Error ? err.message : String(err) }, 500);
+            }
+          }
 
           // Fallthrough to next if route unhandled
           return next();

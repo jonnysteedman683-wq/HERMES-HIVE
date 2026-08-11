@@ -73,6 +73,7 @@ export class MissionDecomposer {
   }
 }
 
+
 export class MissionReplanner {
   /**
    * Re-plans a failing mission, maintaining completed work and evidence while routing around bad capabilities.
@@ -105,6 +106,7 @@ export class MissionReplanner {
     return newPlan;
   }
 }
+
 
 export class MissionMemory {
   private memoryStore: Map<string, any> = new Map();
@@ -144,6 +146,7 @@ export class MissionMemory {
   }
 }
 
+
 export class AutonomousResearchEngine {
   /**
    * Scans the current world model to find high uncertainty properties or missing values, and spawns research sub-missions.
@@ -175,6 +178,7 @@ export class AutonomousResearchEngine {
     }
   }
 }
+
 
 export class AutonomousMissionEngine {
   private activeMissions: Map<string, AutonomousMission> = new Map();
@@ -403,6 +407,7 @@ export class AutonomousMissionEngine {
     this.researchEngine.scanForKnowledgeGapsAndSpawn(this);
   }
 }
+
 
 export const autonomousMissionEngine = new AutonomousMissionEngine();
 export const missionMemory = new MissionMemory();

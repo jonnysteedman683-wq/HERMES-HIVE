@@ -1,5 +1,5 @@
 import { HermesDecision, HermesDecisionType } from '../../shared/types';
-import { geminiProvider } from '../gemini/geminiProvider';
+import { geminiProvider, llmProvider } from '../llm/llmProvider';
 import { agentRegistry } from '../registry/agentRegistry';
 import { missionEngine } from '../missions/missionEngine';
 import { messageBus } from '../bus/messageBus';

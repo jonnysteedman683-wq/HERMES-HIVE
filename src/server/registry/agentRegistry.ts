@@ -1,11 +1,25 @@
 import { Agent, AgentHealth, AgentReputation, AgentRole, AgentStatus } from '../../shared/types';
 import { messageBus } from '../bus/messageBus';
+import { AgentRepository } from '../persistence/agentRepository';
 
 class AgentRegistry {
   private agents: Map<string, Agent> = new Map();
+  private agentRepository = new AgentRepository();
 
   constructor() {
-    this.seedDefaultAgents();
+    this.loadFromDatabase();
+    if (this.agents.size === 0) {
+      this.seedDefaultAgents();
+    }
+  }
+
+  private loadFromDatabase() {
+    try {
+      const stored = this.agentRepository.getAll();
+      stored.forEach((agent) => this.agents.set(agent.id, agent));
+    } catch (err) {
+      console.error('[AgentRegistry] Failed to load agents from database:', err);
+    }
   }
 
   private seedDefaultAgents() {
@@ -69,6 +83,7 @@ class AgentRegistry {
     };
 
     this.agents.set(id, agent);
+    this.agentRepository.upsert(agent);
 
     messageBus.publish('AGENT_CREATED', 'AgentRegistry', {
       agentId: id,

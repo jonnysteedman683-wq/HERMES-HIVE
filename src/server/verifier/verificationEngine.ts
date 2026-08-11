@@ -1,7 +1,7 @@
 import { MissionTask } from '../../shared/types';
 import { agentRegistry } from '../registry/agentRegistry';
 import { messageBus } from '../bus/messageBus';
-import { geminiProvider } from '../gemini/geminiProvider';
+import { geminiProvider, llmProvider } from '../llm/llmProvider';
 
 export interface VerificationOutcome {
   verified: boolean;

@@ -17,6 +17,7 @@ import {
   Globe,
   BrainCircuit,
   Dna,
+  Workflow,
 } from 'lucide-react';
 
 export type TabType =
@@ -32,11 +33,13 @@ export type TabType =
   | 'cognition'
   | 'missions'
   | 'swarm'
+  | 'suprime'
   | 'memory'
   | 'events'
   | 'tools'
   | 'diagnostics'
-  | 'settings';
+  | 'settings'
+  | 'backends';
 
 interface SidebarProps {
   activeTab: TabType;
@@ -64,11 +67,13 @@ export const Sidebar: React.FC<SidebarProps> = ({
     { id: 'cognition', label: 'Cognition & World', icon: Brain },
     { id: 'missions', label: 'Missions & Tasks', icon: Target, badge: activeMissionsCount },
     { id: 'swarm', label: 'Swarm & Agents', icon: Network, badge: activeAgentsCount },
+    { id: 'suprime', label: 'SUPRIME Swarm', icon: Workflow },
     { id: 'memory', label: 'Hive Memory', icon: Database },
     { id: 'events', label: 'Event Stream', icon: Activity },
     { id: 'tools', label: 'Tool Registry', icon: Wrench },
     { id: 'diagnostics', label: 'Diagnostics', icon: BarChart3 },
     { id: 'settings', label: 'Settings & Demo', icon: Settings },
+    { id: 'backends', label: 'Backends', icon: Workflow },
   ];
 
   return (

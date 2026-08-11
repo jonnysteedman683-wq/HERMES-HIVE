@@ -81,8 +81,7 @@ export class ActionAuthorizationEngine {
     }
 
     // 3. Level 3 & Level 4 require check against policy engine
-    // Create a mock capability request for evaluation
-    const mockRequest: CapabilityRequest = {
+    const policyRequest: CapabilityRequest = {
       requestId: `req_eval_${Date.now()}`,
       correlationId: `eval_${Date.now()}`,
       traceId: `eval_${Date.now()}`,
@@ -100,7 +99,7 @@ export class ActionAuthorizationEngine {
       timestamp: new Date().toISOString(),
     };
 
-    const policyDecision = policyAndAuthorizationEngine.evaluateRequest(mockRequest);
+    const policyDecision = policyAndAuthorizationEngine.evaluateRequest(policyRequest);
 
     if (policyDecision.decision === 'ALLOW') {
       return {
