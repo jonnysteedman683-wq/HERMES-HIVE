@@ -89,12 +89,24 @@ export const DeepDiagnosticsConsole: React.FC = () => {
   const runAction = async (url: string, body?: unknown): Promise<Response | null> => {
     setLoading(true);
     try {
-      return await fetch(url, {
+      const res = await fetch(url, {
         method: 'POST',
         ...(body !== undefined
           ? { headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) }
           : {}),
       });
+      if (!res.ok) {
+        // Surface HTTP failures — silent no-ops in a diagnostics console hide
+        // exactly the failures the operator is here to see.
+        setStatusMessage(`Action failed (HTTP ${res.status}): ${url}`);
+        return null;
+      }
+      return res;
+    } catch (err) {
+      // Surface network failures instead of letting the rejection escape the
+      // event handler as an unhandled rejection.
+      setStatusMessage(`Action failed: ${err instanceof Error ? err.message : String(err)}`);
+      return null;
     } finally {
       setLoading(false);
     }

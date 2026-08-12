@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
+import { easeOutCubic } from '../utils/easing';
 
 /**
  * useCountUp — animates a number from 0 (or `from`) to `target` with an
@@ -21,12 +22,13 @@ export function useCountUp(target: number, durationMs = 900, from = 0): number {
     }
 
     const tick = (now: number) => {
-      const t = Math.min((now - startTime) / durationMs, 1);
-      // ease-out cubic
-      const eased = 1 - Math.pow(1 - t, 3);
-      const v = start + delta * eased;
+      const t = (now - startTime) / durationMs;
+      const v = start + delta * easeOutCubic(t);
       setValue(v);
       if (t < 1) {
+        // Keep the next animation's start in sync so an interrupted animation
+        // continues from the current value instead of jumping back to `from`.
+        fromRef.current = v;
         rafRef.current = requestAnimationFrame(tick);
       } else {
         fromRef.current = target;

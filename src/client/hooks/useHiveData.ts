@@ -1,4 +1,4 @@
-import { useEffect, useState, useCallback } from 'react';
+import { useEffect, useState, useCallback, useRef } from 'react';
 import { Agent, DiagnosticsMetrics, HermesDecision, HiveEvent, MemoryRecord, Mission } from '../../shared/types';
 
 export function useHiveData() {
@@ -10,6 +10,9 @@ export function useHiveData() {
   const [diagnostics, setDiagnostics] = useState<DiagnosticsMetrics | null>(null);
   const [loading, setLoading] = useState<boolean>(true);
   const [connected, setConnected] = useState<boolean>(false);
+  // Ref mirror of `connected` so the backup-poll interval can read it without
+  // re-subscribing on every state change.
+  const connectedRef = useRef(false);
 
   const fetchData = useCallback(async () => {
     try {
@@ -42,6 +45,7 @@ export function useHiveData() {
     const eventSource = new EventSource('/api/events/stream');
 
     eventSource.onopen = () => {
+      connectedRef.current = true;
       setConnected(true);
     };
 
@@ -73,12 +77,15 @@ export function useHiveData() {
     };
 
     eventSource.onerror = () => {
+      connectedRef.current = false;
       setConnected(false);
     };
 
-    // Backup polling every 4 seconds in case SSE disconnects
+    // Backup polling every 4 seconds ONLY while SSE is disconnected — the
+    // stream itself already pushes events and refetches on state changes, so
+    // polling on top of a live stream would race those refetches (stale-wins).
     const pollInterval = setInterval(() => {
-      fetchData();
+      if (!connectedRef.current) fetchData();
     }, 4000);
 
     return () => {
