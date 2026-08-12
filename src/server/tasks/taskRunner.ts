@@ -66,42 +66,47 @@ export class TaskRunnerService {
    * Submit a task to the queue — returns the task ID immediately
    */
   async submitTask(spec: TaskSpec): Promise<string> {
-    const taskId = spec.taskId || generateId();
+    try {
+      const taskId = spec.taskId || generateId();
 
-    const record: TaskRecord = {
-      id: taskId,
-      taskId,
-      kind: spec.kind,
-      agentId: spec.agentId,
-      agentRole: spec.agentRole,
-      agentCapabilities: spec.agentCapabilities,
-      systemPrompt: spec.systemPrompt,
-      prompt: spec.prompt,
-      toolName: spec.toolName,
-      toolArgs: spec.toolArgs,
-      requiredCapabilities: spec.requiredCapabilities,
-      timeoutMs: spec.timeoutMs,
-      retryPolicy: spec.retryPolicy || DEFAULT_RETRY_POLICY,
-      priority: spec.priority || 3,
-      context: spec.context,
-      status: 'queued',
-      retryCount: 0,
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString(),
-      errorHistory: [],
-    };
+      const record: TaskRecord = {
+        id: taskId,
+        taskId,
+        kind: spec.kind,
+        agentId: spec.agentId,
+        agentRole: spec.agentRole,
+        agentCapabilities: spec.agentCapabilities,
+        systemPrompt: spec.systemPrompt,
+        prompt: spec.prompt,
+        toolName: spec.toolName,
+        toolArgs: spec.toolArgs,
+        requiredCapabilities: spec.requiredCapabilities,
+        timeoutMs: spec.timeoutMs,
+        retryPolicy: spec.retryPolicy || DEFAULT_RETRY_POLICY,
+        priority: spec.priority || 3,
+        context: spec.context,
+        status: 'queued',
+        retryCount: 0,
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
+        errorHistory: [],
+      };
 
-    this.repo.upsert(record);
+      this.repo.upsert(record);
 
-    messageBus.publish('TASK_ASSIGNMENT', 'TaskRunnerService', {
-      taskId,
-      kind: spec.kind,
-      priority: record.priority,
-      agentId: spec.agentId,
-      missionId: spec.context?.missionId as string | undefined,
-    }, { taskId, missionId: spec.context?.missionId as string | undefined, severity: 'info' });
+      messageBus.publish('TASK_ASSIGNMENT', 'TaskRunnerService', {
+        taskId,
+        kind: spec.kind,
+        priority: record.priority,
+        agentId: spec.agentId,
+        missionId: spec.context?.missionId as string | undefined,
+      }, { taskId, missionId: spec.context?.missionId as string | undefined, severity: 'info' });
 
-    return taskId;
+      return taskId;
+    } catch (err) {
+      console.error('[TaskRunnerService.submitTask] Failed:', err);
+      throw err;
+    }
   }
 
   /**
@@ -144,20 +149,25 @@ export class TaskRunnerService {
    */
   async awaitResult(taskId: string, timeoutMs: number = 120000): Promise<TaskResult> {
     // Check if already completed
-    const existing = this.repo.get(taskId);
-    if (existing && (existing.status === 'completed' || existing.status === 'failed')) {
-      return {
-        taskId,
-        status: existing.status === 'completed' ? 'completed' : 'failed',
-        output: existing.output,
-        error: existing.error,
-        tokensUsed: existing.tokensUsed,
-        latencyMs: existing.latencyMs,
-        modelUsed: existing.modelUsed,
-        verificationScore: existing.verificationScore,
-        verificationComments: existing.verificationComments,
-        completedAt: existing.completedAt || new Date().toISOString(),
-      };
+    try {
+      const existing = this.repo.get(taskId);
+      if (existing && (existing.status === 'completed' || existing.status === 'failed')) {
+        return {
+          taskId,
+          status: existing.status === 'completed' ? 'completed' : 'failed',
+          output: existing.output,
+          error: existing.error,
+          tokensUsed: existing.tokensUsed,
+          latencyMs: existing.latencyMs,
+          modelUsed: existing.modelUsed,
+          verificationScore: existing.verificationScore,
+          verificationComments: existing.verificationComments,
+          completedAt: existing.completedAt || new Date().toISOString(),
+        };
+      }
+    } catch (err) {
+      console.error(`[TaskRunnerService.awaitResult] Failed to fetch task ${taskId}:`, err);
+      throw err;
     }
 
     // Wait for completion
@@ -175,45 +185,55 @@ export class TaskRunnerService {
    * Cancel a running or queued task
    */
   async cancelTask(taskId: string): Promise<boolean> {
-    const task = this.repo.get(taskId);
-    if (!task) return false;
+    try {
+      const task = this.repo.get(taskId);
+      if (!task) return false;
 
-    if (task.status === 'completed' || task.status === 'cancelled') {
-      return false;
+      if (task.status === 'completed' || task.status === 'cancelled') {
+        return false;
+      }
+
+      // For running tasks, we can't truly kill a worker — mark as cancelled
+      // and signal to the worker to abort
+      this.repo.updateStatus(taskId, 'cancelled');
+
+      messageBus.publish('SYSTEM_ALERT', 'TaskRunnerService', {
+        message: `Task ${taskId} cancelled by operator`,
+        taskId,
+        missionId: task.context?.missionId as string | undefined,
+      }, { taskId, missionId: task.context?.missionId as string | undefined, severity: 'warning' });
+
+      return true;
+    } catch (err) {
+      console.error(`[TaskRunnerService.cancelTask] Failed for task ${taskId}:`, err);
+      throw err;
     }
-
-    // For running tasks, we can't truly kill a worker — mark as cancelled
-    // and signal to the worker to abort
-    this.repo.updateStatus(taskId, 'cancelled');
-
-    messageBus.publish('SYSTEM_ALERT', 'TaskRunnerService', {
-      message: `Task ${taskId} cancelled by operator`,
-      taskId,
-      missionId: task.context?.missionId as string | undefined,
-    }, { taskId, missionId: task.context?.missionId as string | undefined, severity: 'warning' });
-
-    return true;
   }
 
   /**
    * Retry a failed task
    */
   async retryTask(taskId: string): Promise<boolean> {
-    const task = this.repo.get(taskId);
-    if (!task) return false;
+    try {
+      const task = this.repo.get(taskId);
+      if (!task) return false;
 
-    if (task.retryCount >= (task.retryPolicy?.maxRetries || 3)) {
-      return false;
+      if (task.retryCount >= (task.retryPolicy?.maxRetries || 3)) {
+        return false;
+      }
+
+      this.repo.updateStatus(taskId, 'queued');
+      messageBus.publish('TASK_ASSIGNMENT', 'TaskRunnerService', {
+        taskId,
+        action: 'retry',
+        retryCount: task.retryCount + 1,
+      }, { taskId, missionId: task.context?.missionId as string | undefined, severity: 'info' });
+
+      return true;
+    } catch (err) {
+      console.error(`[TaskRunnerService.retryTask] Failed for task ${taskId}:`, err);
+      throw err;
     }
-
-    this.repo.updateStatus(taskId, 'queued');
-    messageBus.publish('TASK_ASSIGNMENT', 'TaskRunnerService', {
-      taskId,
-      action: 'retry',
-      retryCount: task.retryCount + 1,
-    }, { taskId, missionId: task.context?.missionId as string | undefined, severity: 'info' });
-
-    return true;
   }
 
   /**
