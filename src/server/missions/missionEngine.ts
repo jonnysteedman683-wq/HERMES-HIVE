@@ -106,9 +106,14 @@ class MissionEngine {
       tags: ['mission', 'active'],
     });
 
-    // Start execution asynchronously
+    // Start execution asynchronously. Guarded: a throw inside a timer
+    // callback is an uncaught exception and would crash the whole process.
     setTimeout(() => {
-      this.startMission(missionId);
+      try {
+        this.startMission(missionId);
+      } catch (err) {
+        console.error(`[MissionEngine] Failed to start mission ${missionId}:`, err);
+      }
     }, 100);
 
     return mission;
@@ -146,10 +151,26 @@ class MissionEngine {
         });
 
         if (depsSatisfied) {
-          this.executeTask(mission, task);
+          this.executeTask(mission, task).catch((err) => {
+            // Fire-and-forget tasks must never reject unhandled (Node crashes
+            // on unhandled rejections by default).
+            console.error(`[MissionEngine] Task ${task.id} (mission ${mission.id}) failed with unhandled error:`, err);
+          });
         }
       });
     });
+  }
+
+  /**
+   * Guarded wrapper for timer-driven rescheduling. A throw inside a timer
+   * callback is an uncaught exception and would crash the whole process.
+   */
+  private scheduleNextTasksSafe(): void {
+    try {
+      this.scheduleNextTasks();
+    } catch (err) {
+      console.error('[MissionEngine] scheduleNextTasks failed:', err);
+    }
   }
 
   private async executeTask(mission: Mission, task: MissionTask) {
@@ -270,12 +291,12 @@ Maintain highest quality standards.`;
           verificationResult.comments,
           async (t) => {
             t.status = 'pending';
-            setTimeout(() => this.scheduleNextTasks(), 200);
+            setTimeout(() => this.scheduleNextTasksSafe(), 200);
           },
           async (t, newAgentId) => {
             t.assignedAgentId = newAgentId;
             t.status = 'pending';
-            setTimeout(() => this.scheduleNextTasks(), 200);
+            setTimeout(() => this.scheduleNextTasksSafe(), 200);
           }
         );
       }
@@ -297,18 +318,18 @@ Maintain highest quality standards.`;
         errorMsg,
         async (t) => {
           t.status = 'pending';
-          setTimeout(() => this.scheduleNextTasks(), 200);
+          setTimeout(() => this.scheduleNextTasksSafe(), 200);
         },
         async (t, newAgentId) => {
           t.assignedAgentId = newAgentId;
           t.status = 'pending';
-          setTimeout(() => this.scheduleNextTasks(), 200);
+          setTimeout(() => this.scheduleNextTasksSafe(), 200);
         }
       );
     } finally {
       this.runningTaskCount--;
       this.updateMissionProgress(mission);
-      this.scheduleNextTasks();
+      this.scheduleNextTasksSafe();
     }
   }
 
@@ -369,12 +390,12 @@ Maintain highest quality standards.`;
         result.error || 'queued task failed',
         async (t) => {
           t.status = 'pending';
-          setTimeout(() => this.scheduleNextTasks(), 200);
+          setTimeout(() => this.scheduleNextTasksSafe(), 200);
         },
         async (t, newAgentId) => {
           t.assignedAgentId = newAgentId;
           t.status = 'pending';
-          setTimeout(() => this.scheduleNextTasks(), 200);
+          setTimeout(() => this.scheduleNextTasksSafe(), 200);
         }
       );
     }

@@ -99,9 +99,15 @@ export class TaskWorker {
         for (const task of queuedTasks) {
           if (this.repo.claimTask(task.taskId, process.pid)) {
             this.runningTaskCount++;
-            this.executeTask(task).finally(() => {
-              this.runningTaskCount--;
-            });
+            this.executeTask(task)
+              .catch((err) => {
+                // The error path itself can fail (e.g. sqlite lock during
+                // recordError) — never let a rejection escape fire-and-forget.
+                console.error(`[TaskWorker:${this.workerId}] Task ${task.taskId} failed with unhandled error:`, err);
+              })
+              .finally(() => {
+                this.runningTaskCount--;
+              });
           }
         }
       }
