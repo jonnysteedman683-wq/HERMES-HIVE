@@ -1,6 +1,22 @@
 import { CapabilityDescriptor } from '../../shared/types';
 import * as fs from 'fs';
 import * as path from 'path';
+import * as net from 'net';
+import * as dns from 'dns';
+
+/** True when the dotted-quad host is in a private/reserved IPv4 range. */
+function isPrivateIPv4(host: string): boolean {
+  const parts = host.split('.').map(Number);
+  if (parts.length !== 4 || parts.some((n) => Number.isNaN(n) || n < 0 || n > 255)) return false;
+  const [a, b] = parts;
+  return (
+    a === 0 || a === 10 || a === 127 ||
+    (a === 172 && b >= 16 && b <= 31) ||
+    (a === 192 && b === 168) ||
+    (a === 100 && b >= 64 && b <= 127) || // CGNAT
+    (a === 198 && (b === 18 || b === 19))  // benchmarking
+  );
+}
 
 export class ConnectorRuntime {
   public async executeConnector(
@@ -50,6 +66,86 @@ export class ConnectorRuntime {
   private async executeSearch(params: { query: string; maxResults?: number }) {
     const max = params.maxResults || 5;
     throw new Error('web.search is not yet bound to a real search provider. Configure a provider or use Hermes web search.');
+  }
+
+  /**
+   * Resolves a caller-supplied repository file path and guarantees the result
+   * stays inside the repository root. Rejects `../` traversal and absolute
+   * paths pointing elsewhere on the filesystem (trust-boundary guard).
+   */
+  private resolveWithinRepo(targetFile: string): string {
+    const repoRoot = path.resolve(process.cwd());
+    const fullPath = path.resolve(repoRoot, targetFile);
+    const relative = path.relative(repoRoot, fullPath);
+    if (relative === '' || relative.startsWith('..') || path.isAbsolute(relative)) {
+      throw new Error(`Repository file path escapes the repository root: "${targetFile}"`);
+    }
+    return fullPath;
+  }
+
+  /**
+   * Validates a caller-supplied http_request URL before it reaches fetch().
+   * Only http/https is allowed, credentials may not be embedded in the URL,
+   * and (unless HIVE_ALLOW_PRIVATE_URLS=1) loopback, private, link-local, and
+   * reserved hosts are rejected — including DNS names that resolve to them
+   * (anti-SSRF trust-boundary guard).
+   */
+  private async assertSafeHttpUrl(rawUrl: string): Promise<string> {
+    let parsed: URL;
+    try {
+      parsed = new URL(rawUrl);
+    } catch {
+      throw new Error(`http_request URL is invalid: "${rawUrl}"`);
+    }
+    if (parsed.protocol !== 'http:' && parsed.protocol !== 'https:') {
+      throw new Error(`http_request only supports http/https URLs, got "${parsed.protocol}"`);
+    }
+    if (parsed.username || parsed.password) {
+      throw new Error('http_request URL must not embed credentials (user:pass@host)');
+    }
+
+    const host = parsed.hostname.toLowerCase();
+    if (process.env.HIVE_ALLOW_PRIVATE_URLS !== '1') {
+      if (this.isPrivateOrReservedHost(host)) {
+        throw new Error(`http_request to private/reserved host is blocked: "${host}"`);
+      }
+      if (net.isIP(host) === 0) {
+        // DNS names: fail closed if ANY resolved address is private/reserved.
+        let addresses: { address: string }[];
+        try {
+          addresses = await dns.promises.lookup(host, { all: true, verbatim: true });
+        } catch (err) {
+          throw new Error(
+            `http_request could not resolve host "${host}": ${err instanceof Error ? err.message : String(err)}`
+          );
+        }
+        const blocked = addresses.some((entry) =>
+          this.isPrivateOrReservedHost(entry.address.toLowerCase())
+        );
+        if (blocked) {
+          throw new Error(`http_request to host resolving to a private/reserved address is blocked: "${host}"`);
+        }
+      }
+    }
+    return parsed.toString();
+  }
+
+  /** Static host classification: loopback names, private/link-local/reserved IPs. */
+  private isPrivateOrReservedHost(host: string): boolean {
+    if (host === 'localhost' || host === '0.0.0.0' || host === '::' || host === '::1') return true;
+    const ipVersion = net.isIP(host);
+    if (ipVersion === 4) {
+      return isPrivateIPv4(host) || host.startsWith('169.254.'); // link-local incl. cloud metadata
+    }
+    if (ipVersion === 6) {
+      if (host.startsWith('fc') || host.startsWith('fd')) return true; // unique-local (fc00::/7)
+      if (host.startsWith('fe8') || host.startsWith('fe9') || host.startsWith('fea') || host.startsWith('feb')) {
+        return true; // link-local (fe80::/10)
+      }
+      if (host.startsWith('::ffff:')) return this.isPrivateOrReservedHost(host.slice(7)); // IPv4-mapped
+      return false;
+    }
+    return false; // DNS name — resolved by assertSafeHttpUrl
   }
 
   private async executeHttpRequest(operation: string, params: { url: string; method?: string; headers?: any; body?: any; timeoutMs?: number }) {
