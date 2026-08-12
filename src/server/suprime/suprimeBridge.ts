@@ -38,43 +38,99 @@ export class SuprimeBridge {
     this.baseUrl = baseUrl.replace(/\/$/, '');
   }
 
+  private errorMessage(err: unknown): string {
+    return err instanceof Error ? err.message : String(err);
+  }
+
   async health() {
-    const res = await fetch(`${this.baseUrl}/health`);
-    return (await res.json()) as SuprimeHealth;
+    try {
+      const res = await fetch(`${this.baseUrl}/health`);
+      return (await res.json()) as SuprimeHealth;
+    } catch (err) {
+      console.warn(`[SuprimeBridge] health() failed: ${this.errorMessage(err)}`);
+      return {
+        status: 'error',
+        suprime_version: '',
+        started: false,
+        node_id: null,
+        address: null,
+        tasks_submitted: 0,
+        last_error: this.errorMessage(err),
+      } as SuprimeHealth;
+    }
   }
 
   async startSwarm() {
-    const res = await fetch(`${this.baseUrl}/swarm/start`, { method: 'POST' });
-    return await res.json();
+    try {
+      const res = await fetch(`${this.baseUrl}/swarm/start`, { method: 'POST' });
+      return await res.json();
+    } catch (err) {
+      console.warn(`[SuprimeBridge] startSwarm() failed: ${this.errorMessage(err)}`);
+      return { status: 'error', error: this.errorMessage(err) };
+    }
   }
 
   async stopSwarm() {
-    const res = await fetch(`${this.baseUrl}/swarm/stop`, { method: 'POST' });
-    return await res.json();
+    try {
+      const res = await fetch(`${this.baseUrl}/swarm/stop`, { method: 'POST' });
+      return await res.json();
+    } catch (err) {
+      console.warn(`[SuprimeBridge] stopSwarm() failed: ${this.errorMessage(err)}`);
+      return { status: 'error', error: this.errorMessage(err) };
+    }
   }
 
   async status() {
-    const res = await fetch(`${this.baseUrl}/swarm/status`);
-    return (await res.json()) as SuprimeStatus;
+    try {
+      const res = await fetch(`${this.baseUrl}/swarm/status`);
+      return (await res.json()) as SuprimeStatus;
+    } catch (err) {
+      console.warn(`[SuprimeBridge] status() failed: ${this.errorMessage(err)}`);
+      return {
+        status: 'error',
+        started: false,
+        node_id: '',
+        address: '',
+        leader: null,
+        peers: [],
+        store_keys: [],
+        metrics: {},
+      } as SuprimeStatus;
+    }
   }
 
   async submitTask(kind: string, args: Record<string, unknown> = {}, taskId?: string) {
-    const res = await fetch(`${this.baseUrl}/tasks/submit`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ kind, args, task_id: taskId }),
-    });
-    return await res.json();
+    try {
+      const res = await fetch(`${this.baseUrl}/tasks/submit`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ kind, args, task_id: taskId }),
+      });
+      return await res.json();
+    } catch (err) {
+      console.warn(`[SuprimeBridge] submitTask(${kind}) failed: ${this.errorMessage(err)}`);
+      return { status: 'error', error: this.errorMessage(err) };
+    }
   }
 
   async listTasks() {
-    const res = await fetch(`${this.baseUrl}/tasks`);
-    return (await res.json()) as { status: string; tasks: SuprimeTask[] };
+    try {
+      const res = await fetch(`${this.baseUrl}/tasks`);
+      return (await res.json()) as { status: string; tasks: SuprimeTask[] };
+    } catch (err) {
+      console.warn(`[SuprimeBridge] listTasks() failed: ${this.errorMessage(err)}`);
+      return { status: 'error', tasks: [] } as { status: string; tasks: SuprimeTask[] };
+    }
   }
 
   async registerWorker(kind: string) {
-    const res = await fetch(`${this.baseUrl}/worker/${encodeURIComponent(kind)}`, { method: 'POST' });
-    return await res.json();
+    try {
+      const res = await fetch(`${this.baseUrl}/worker/${encodeURIComponent(kind)}`, { method: 'POST' });
+      return await res.json();
+    } catch (err) {
+      console.warn(`[SuprimeBridge] registerWorker(${kind}) failed: ${this.errorMessage(err)}`);
+      return { status: 'error', error: this.errorMessage(err) };
+    }
   }
 }
 

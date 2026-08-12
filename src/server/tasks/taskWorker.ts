@@ -79,9 +79,13 @@ export class TaskWorker {
     }, { severity: 'info' });
 
     let waited = 0;
-    while (this.runningTaskCount > 0 && waited < 30000) {
-      await new Promise((r) => setTimeout(r, 500));
-      waited += 500;
+    try {
+      while (this.runningTaskCount > 0 && waited < 30000) {
+        await new Promise((r) => setTimeout(r, 500));
+        waited += 500;
+      }
+    } catch (err) {
+      console.error(`[TaskWorker:${this.workerId}] Error while waiting for tasks to finish:`, err);
     }
   }
 

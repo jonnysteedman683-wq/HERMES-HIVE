@@ -141,7 +141,65 @@ export class HermesWebBridge {
     }
 
     // Submit request
-    const response = await hermesWebEngine.processCapabilityRequest(request);
+    let response: CapabilityResponse;
+    try {
+      response = await hermesWebEngine.processCapabilityRequest(request);
+    } catch (err) {
+      const errorMessage = err instanceof Error ? err.message : String(err);
+      causalTracingEngine.recordSpan({
+        traceId: activeTraceId,
+        causality: 'TRIGGERED_BY',
+        source: 'HermesWebBridge',
+        actor: params.agentId,
+        component: 'HERMES_WEB_BRIDGE',
+        action: `${executionMode}:${params.capabilityId}:${params.operation}`,
+        inputs: params.parameters,
+        outputs: null,
+        capabilityRef: params.capabilityId,
+        durationMs: 0,
+        status: 'FAILED',
+        error: {
+          code: 'EXECUTION_ERROR',
+          message: errorMessage,
+          category: 'EXECUTION_ERROR',
+          retryable: false,
+          severity: 'HIGH',
+          requestId,
+          timestamp: new Date().toISOString(),
+        },
+      });
+
+      return {
+        requestId,
+        executionId: `exec_failed_${Date.now()}`,
+        status: 'FAILED',
+        executionStatus: 'FAILED',
+        verificationStatus: 'SKIPPED',
+        result: null,
+        error: {
+          code: 'EXECUTION_ERROR',
+          message: errorMessage,
+          category: 'EXECUTION_ERROR',
+          retryable: false,
+          severity: 'HIGH',
+          requestId,
+          timestamp: new Date().toISOString(),
+        },
+        warnings: [`Capability request failed: ${errorMessage}`],
+        timing: {
+          receivedAt: timestamp,
+          completedAt: new Date().toISOString(),
+          durationMs: 0,
+        },
+        executionMetadata: {
+          providerUsed: 'hermes-web-bridge',
+          capabilityVersion: '1.0.0',
+          executionMode,
+          traceId: activeTraceId,
+          correlationId: activeTraceId,
+        },
+      };
+    }
 
     // Record causal tracking span
     causalTracingEngine.recordSpan({
