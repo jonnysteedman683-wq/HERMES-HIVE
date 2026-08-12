@@ -28,14 +28,16 @@ COPY --from=builder /app/dist ./dist
 RUN addgroup -g 1001 -S nodejs && \
     adduser -S nextjs -u 1001
 
+# Install curl (healthcheck) and serve (static server) as root, before
+# dropping privileges — pinned globally at build time so the runtime never
+# needs to fetch from the npm registry on container start
+RUN apk add --no-cache curl && npm install -g serve@14.2.6
+
 USER nextjs
 
 EXPOSE 3000
 
 ENV NODE_ENV=production
 
-# Use simple static server
-RUN apk add --no-cache curl
-
 # Serve the built frontend from /app/dist (index.html lives there, not at /app)
-CMD ["npx", "serve", "-s", "dist"]
+CMD ["serve", "-s", "dist"]
