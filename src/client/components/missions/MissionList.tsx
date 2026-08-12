@@ -1,7 +1,8 @@
 import React, { useState } from 'react';
+import { badgeFor, MISSION_STATUS_BADGE } from '../../utils/badges';
 import { Mission } from '../../../shared/types';
 import { TaskGraph } from './TaskGraph';
-import { Target, CheckCircle2, Clock, AlertTriangle, ChevronRight, Award, FileText } from 'lucide-react';
+import { Target, ChevronRight, Award, FileText } from 'lucide-react';
 
 interface MissionListProps {
   missions: Mission[];
@@ -13,19 +14,6 @@ export const MissionList: React.FC<MissionListProps> = ({ missions }) => {
   );
 
   const selectedMission = missions.find((m) => m.id === selectedMissionId) || (missions.length > 0 ? missions[0] : null);
-
-  const getStatusBadge = (status: Mission['status']) => {
-    switch (status) {
-      case 'completed':
-        return { label: 'Completed', bg: 'bg-emerald-500/20 text-emerald-300 border-emerald-500/40', icon: CheckCircle2 };
-      case 'in_progress':
-        return { label: 'In Progress', bg: 'bg-cyan-500/20 text-cyan-300 border-cyan-500/40', icon: Clock };
-      case 'failed':
-        return { label: 'Failed', bg: 'bg-red-500/20 text-red-300 border-red-500/40', icon: AlertTriangle };
-      default:
-        return { label: status, bg: 'bg-slate-800 text-slate-400 border-slate-700', icon: Clock };
-    }
-  };
 
   return (
     <div className="h-full grid grid-cols-1 lg:grid-cols-3 gap-6 min-h-0">
@@ -43,7 +31,7 @@ export const MissionList: React.FC<MissionListProps> = ({ missions }) => {
           ) : (
             missions.map((m) => {
               const isSelected = m.id === selectedMission?.id;
-              const statusInfo = getStatusBadge(m.status);
+              const statusInfo = badgeFor(MISSION_STATUS_BADGE, m.status);
               const StatusIcon = statusInfo.icon;
               const completedTasksCount = m.tasks.filter((t) => t.status === 'completed').length;
 

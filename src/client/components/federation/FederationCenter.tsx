@@ -1,4 +1,5 @@
-import React, { useEffect, useState } from 'react';
+import React, { useState } from 'react';
+import { usePolling } from '../../hooks/usePolling';
 import {
   Globe2,
   Building2,
@@ -142,11 +143,7 @@ export const FederationCenter: React.FC = () => {
     }
   };
 
-  useEffect(() => {
-    fetchFederationData();
-    const interval = setInterval(fetchFederationData, 3000);
-    return () => clearInterval(interval);
-  }, []);
+  usePolling(fetchFederationData, 3000);
 
   const handleConvertOpportunity = async (oppId: string) => {
     try {

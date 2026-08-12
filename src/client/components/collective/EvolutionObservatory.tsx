@@ -1,4 +1,7 @@
-import React, { useEffect, useState } from 'react';
+import React, { useState } from 'react';
+import { clsFor, PROPOSAL_STATUS_CLS } from '../../utils/badges';
+import { formatTime } from '../../utils/format';
+import { usePolling } from '../../hooks/usePolling';
 import {
   Brain,
   Users,
@@ -92,11 +95,7 @@ export const EvolutionObservatory: React.FC = () => {
     }
   };
 
-  useEffect(() => {
-    fetchData();
-    const interval = setInterval(fetchData, 4000);
-    return () => clearInterval(interval);
-  }, []);
+  usePolling(fetchData, 4000);
 
   const handleAddObservation = async () => {
     if (!newObsText.trim()) return;
@@ -290,7 +289,7 @@ export const EvolutionObservatory: React.FC = () => {
                     <span className="px-2 py-0.5 text-[9px] font-mono font-bold rounded bg-purple-500/20 text-purple-300 border border-purple-500/30 uppercase">
                       {obs.category}
                     </span>
-                    <span className="text-[10px] font-mono text-slate-500">{new Date(obs.timestamp).toLocaleTimeString()}</span>
+                    <span className="text-[10px] font-mono text-slate-500">{formatTime(obs.timestamp)}</span>
                   </div>
                   <p className="text-xs font-bold text-slate-100">{obs.observation}</p>
                   <div className="flex justify-between text-[10px] font-mono text-slate-400 pt-2 border-t border-slate-900">
@@ -376,9 +375,7 @@ export const EvolutionObservatory: React.FC = () => {
                   <div className="flex justify-between items-center">
                     <div className="flex items-center gap-2">
                       <span className={`px-2.5 py-0.5 text-[10px] font-mono font-bold rounded uppercase ${
-                        prop.status === 'CONSENSUS_REACHED' ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/30' :
-                        prop.status === 'GOVERNANCE_BLOCKED' ? 'bg-rose-500/20 text-rose-300 border border-rose-500/30' :
-                        'bg-amber-500/20 text-amber-300 border border-amber-500/30'
+clsFor(PROPOSAL_STATUS_CLS, prop.status)
                       }`}>
                         {prop.status}
                       </span>
@@ -485,7 +482,7 @@ export const EvolutionObservatory: React.FC = () => {
                     <span className="px-2.5 py-0.5 text-[9px] font-mono font-bold rounded bg-purple-500/20 text-purple-300 border border-purple-500/30 uppercase">
                       {mem.category}
                     </span>
-                    <span className="text-[10px] font-mono text-slate-500">{new Date(mem.timestamp).toLocaleTimeString()}</span>
+                    <span className="text-[10px] font-mono text-slate-500">{formatTime(mem.timestamp)}</span>
                   </div>
 
                   <p className="text-xs font-bold text-slate-100">{mem.content}</p>

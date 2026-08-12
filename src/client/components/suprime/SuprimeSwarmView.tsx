@@ -1,4 +1,5 @@
-import React, { useEffect, useCallback, useState } from 'react';
+import React, { useCallback, useState } from 'react';
+import { usePolling } from '../../hooks/usePolling';
 
 interface SuprimeTask {
   id: string;
@@ -44,11 +45,7 @@ export const SuprimeSwarmView: React.FC = () => {
     }
   }, []);
 
-  useEffect(() => {
-    load();
-    const interval = setInterval(load, 2000);
-    return () => clearInterval(interval);
-  }, [load]);
+  usePolling(load, 2000);
 
   const submitTask = async () => {
     setSubmitting(true);

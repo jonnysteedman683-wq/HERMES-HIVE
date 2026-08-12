@@ -1,4 +1,5 @@
-import React, { useEffect, useState } from 'react';
+import React, { useState } from 'react';
+import { usePolling } from '../../hooks/usePolling';
 import { Compass, Target, Coins, Cpu, Play, CheckCircle2, Clock, AlertTriangle } from 'lucide-react';
 import { Goal, OperatingMode, ResourceBudget } from '../../../shared/types';
 
@@ -26,11 +27,7 @@ export const GoalHierarchyView: React.FC = () => {
     }
   };
 
-  useEffect(() => {
-    fetchData();
-    const interval = setInterval(fetchData, 3000);
-    return () => clearInterval(interval);
-  }, []);
+  usePolling(fetchData, 3000);
 
   const handleModeChange = async (newMode: OperatingMode) => {
     try {

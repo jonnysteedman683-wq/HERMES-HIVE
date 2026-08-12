@@ -1,4 +1,7 @@
-import React, { useEffect, useState } from 'react';
+import React, { useState } from 'react';
+import { clsFor, HIVE_STATUS_CLS, MUTATION_STATUS_CLS, SESSION_STATUS_CLS } from '../../utils/badges';
+import { formatTime } from '../../utils/format';
+import { usePolling } from '../../hooks/usePolling';
 import {
   Network,
   Cpu,
@@ -117,11 +120,7 @@ export const Stage10Symbiosis: React.FC = () => {
     }
   };
 
-  useEffect(() => {
-    fetchData();
-    const interval = setInterval(fetchData, 4000);
-    return () => clearInterval(interval);
-  }, []);
+  usePolling(fetchData, 4000);
 
   const handleTransfer = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -486,7 +485,7 @@ export const Stage10Symbiosis: React.FC = () => {
                   >
                     <div className="absolute top-4 right-4 flex items-center gap-1.5">
                       <span className={`w-2.5 h-2.5 rounded-full ${
-                        hive.status === 'ONLINE' ? 'bg-emerald-500' : hive.status === 'SYNCHRONIZING' ? 'bg-amber-500 animate-pulse' : 'bg-rose-500'
+                        clsFor(HIVE_STATUS_CLS, hive.status)
                       }`}></span>
                       <span className="text-[10px] font-mono text-slate-400 font-semibold">{hive.status}</span>
                     </div>
@@ -634,7 +633,7 @@ export const Stage10Symbiosis: React.FC = () => {
                         <td className="py-2.5 text-emerald-400">{item.toHive}</td>
                         <td className="py-2.5 text-amber-400 font-bold">{item.amount} T</td>
                         <td className="py-2.5 max-w-xs truncate text-slate-300 font-sans">{item.purpose}</td>
-                        <td className="py-2.5 text-slate-500 text-[11px]">{new Date(item.timestamp).toLocaleTimeString()}</td>
+                        <td className="py-2.5 text-slate-500 text-[11px]">{formatTime(item.timestamp)}</td>
                       </tr>
                     ))}
                   </tbody>
@@ -779,7 +778,7 @@ export const Stage10Symbiosis: React.FC = () => {
                     >
                       <div className="flex justify-between items-start">
                         <span className={`px-2 py-0.5 text-[9px] font-bold font-mono rounded uppercase ${
-                          mut.status === 'DEPLOYED_MUTATION' ? 'bg-emerald-950 text-emerald-400' : mut.status === 'SANDBOX_VERIFIED' ? 'bg-indigo-950 text-indigo-400' : mut.status === 'RESTRICTED' ? 'bg-rose-950 text-rose-400' : 'bg-amber-950 text-amber-400'
+                          clsFor(MUTATION_STATUS_CLS, mut.status)
                         }`}>
                           {mut.status.replace('_', ' ')}
                         </span>
@@ -997,7 +996,7 @@ export const Stage10Symbiosis: React.FC = () => {
                   >
                     <div className="flex justify-between items-start">
                       <span className={`px-2 py-0.5 text-[9px] font-bold font-mono rounded uppercase ${
-                        sess.status === 'COMPLETED' ? 'bg-emerald-950 text-emerald-400' : sess.status === 'CONSOLIDATED' ? 'bg-purple-950 text-purple-400' : 'bg-amber-950 text-amber-400 animate-pulse'
+                        clsFor(SESSION_STATUS_CLS, sess.status)
                       }`}>
                         {sess.status}
                       </span>
