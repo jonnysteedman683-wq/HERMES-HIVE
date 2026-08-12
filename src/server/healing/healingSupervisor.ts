@@ -12,9 +12,14 @@ class HealingSupervisor {
 
   public startHealthChecks() {
     if (this.timer) clearInterval(this.timer);
-    // Run health check every 15 seconds
+    // Run health check every 15 seconds. Guarded: a throw inside a timer
+    // callback is an uncaught exception and would crash the whole process.
     this.timer = setInterval(() => {
-      this.checkAgentHeartbeats();
+      try {
+        this.checkAgentHeartbeats();
+      } catch (err) {
+        console.error('[HealingSupervisor] Health check failed:', err);
+      }
     }, 15000);
   }
 
