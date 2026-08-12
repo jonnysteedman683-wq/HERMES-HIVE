@@ -13,7 +13,3 @@ dist/
 # environment
 .env
 *.log
-
-# bun lockfile
-bun.lock
-bun.lockb

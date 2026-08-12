@@ -37,4 +37,5 @@ ENV NODE_ENV=production
 # Use simple static server
 RUN apk add --no-cache curl
 
-CMD ["npx", "serve", "-s", "."]
+# Serve the built frontend from /app/dist (index.html lives there, not at /app)
+CMD ["npx", "serve", "-s", "dist"]

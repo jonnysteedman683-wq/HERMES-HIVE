@@ -1,7 +1,7 @@
 import Database from 'better-sqlite3';
 import path from 'path';
 
-const DB_PATH = path.resolve(process.cwd(), '.hive', 'hive.sqlite');
+const DB_PATH = path.resolve(process.cwd(), process.env.HIVE_DB_PATH ?? '.hive/hive.sqlite');
 const db = new Database(DB_PATH);
 db.pragma('journal_mode = WAL');
 db.pragma('synchronous = NORMAL');

@@ -57,14 +57,14 @@ hermes-hive/
 
 **Protected files (do not modify):**
 - `src/shared/types.ts` - Core type definitions
-- `src/server/routes/*` - Server route handlers
+- `src/server/apiMiddleware.ts` - API middleware entry point
 - `tsconfig.json` - TypeScript configuration
 
 ## Coding Conventions
 
 ### TypeScript
 
-- Use TypeScript strict mode
+- Write type-safe TypeScript; verify with `bun run lint` (tsc --noEmit)
 - Export types alongside interfaces
 - Prefer `type` for simple unions/aliases, `interface` for objects
 
@@ -72,7 +72,7 @@ hermes-hive/
 
 - Use functional components with hooks
 - Prefer TypeScript generics in component props
-- Use `motion` from Framer Motion for animations
+- Use `motion` (imported from `motion/react`) for animations
 - Follow the existing tailwind patterns
 
 ### Backend (Express)
@@ -170,4 +170,4 @@ docker-compose up
 
 ## License
 
-This project is licensed under the MIT License - see the LICENSE file for details.
+This project is licensed under the MIT License.

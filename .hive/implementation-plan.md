@@ -31,7 +31,7 @@ The two active Hermes instances have already completed significant foundational 
    - Command mirroring (Hermes commands → Suprime tasks)
 
 4. **✅ SQLite Persistence** (`src/server/persistence/`)
-   - `hiveDatabase.ts` — WAL mode, 6 tables (agents, missions, events, memory_records, decisions, ledger)
+   - `hiveDatabase.ts` — WAL mode, 9 tables (agents, missions, memory_records, events, decisions, ledger, generic_records, tasks, workers)
    - `AgentRepository` — upsert + load all agents from DB
    - `MissionRepository` — upsert + query missions
    - `EventRepository` — event stream persistence
