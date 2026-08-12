@@ -154,72 +154,77 @@ class AgentConfigManager {
   }
 
   public async executeExternalCall(prompt: string, systemInstruction?: string): Promise<{ text: string; modelUsed: string }> {
-    const settings = this.currentSettings;
-    const provider = settings.providerType;
-    const url = settings.apiUrl;
-    const key = settings.apiKey;
-    const model = settings.modelName;
+    try {
+      const settings = this.currentSettings;
+      const provider = settings.providerType;
+      const url = settings.apiUrl;
+      const key = settings.apiKey;
+      const model = settings.modelName;
 
-    if (provider === 'gemini') {
-      const fullUrl = `${url.replace(/\/$/, '')}/${model}:generateContent?key=${key}`;
-      const payload: any = {
-        contents: [{ parts: [{ text: prompt }] }]
-      };
-      if (systemInstruction) {
-        payload.systemInstruction = {
-          parts: [{ text: systemInstruction }]
+      if (provider === 'gemini') {
+        const fullUrl = `${url.replace(/\/$/, '')}/${model}:generateContent?key=${key}`;
+        const payload: any = {
+          contents: [{ parts: [{ text: prompt }] }]
         };
-      }
+        if (systemInstruction) {
+          payload.systemInstruction = {
+            parts: [{ text: systemInstruction }]
+          };
+        }
 
-      const response = await fetch(fullUrl, {
-        method: 'POST',
-        headers: {
+        const response = await fetch(fullUrl, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify(payload),
+        });
+
+        if (!response.ok) {
+          const errText = await response.text();
+          throw new Error(`Gemini API call failed with status ${response.status}: ${errText}`);
+        }
+
+        const data = await response.json() as any;
+        const text = data?.candidates?.[0]?.content?.parts?.[0]?.text || '';
+        return { text, modelUsed: `external-gemini:${model}` };
+      } else {
+        // OpenAI/Ollama/Custom standard completions endpoint
+        const fullUrl = `${url.replace(/\/$/, '')}/chat/completions`;
+        const headers: Record<string, string> = {
           'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(payload),
-      });
+        };
+        if (key) {
+          headers['Authorization'] = `Bearer ${key}`;
+        }
 
-      if (!response.ok) {
-        const errText = await response.text();
-        throw new Error(`Gemini API call failed with status ${response.status}: ${errText}`);
+        const messages: any[] = [];
+        if (systemInstruction) {
+          messages.push({ role: 'system', content: systemInstruction });
+        }
+        messages.push({ role: 'user', content: prompt });
+
+        const response = await fetch(fullUrl, {
+          method: 'POST',
+          headers,
+          body: JSON.stringify({
+            model: model,
+            messages,
+          }),
+        });
+
+        if (!response.ok) {
+          const errText = await response.text();
+          throw new Error(`Custom Agent API call failed with status ${response.status}: ${errText}`);
+        }
+
+        const data = await response.json() as any;
+        const text = data?.choices?.[0]?.message?.content || '';
+        return { text, modelUsed: `external-agent:${model}` };
       }
-
-      const data = await response.json() as any;
-      const text = data?.candidates?.[0]?.content?.parts?.[0]?.text || '';
-      return { text, modelUsed: `external-gemini:${model}` };
-    } else {
-      // OpenAI/Ollama/Custom standard completions endpoint
-      const fullUrl = `${url.replace(/\/$/, '')}/chat/completions`;
-      const headers: Record<string, string> = {
-        'Content-Type': 'application/json',
-      };
-      if (key) {
-        headers['Authorization'] = `Bearer ${key}`;
-      }
-
-      const messages: any[] = [];
-      if (systemInstruction) {
-        messages.push({ role: 'system', content: systemInstruction });
-      }
-      messages.push({ role: 'user', content: prompt });
-
-      const response = await fetch(fullUrl, {
-        method: 'POST',
-        headers,
-        body: JSON.stringify({
-          model: model,
-          messages,
-        }),
-      });
-
-      if (!response.ok) {
-        const errText = await response.text();
-        throw new Error(`Custom Agent API call failed with status ${response.status}: ${errText}`);
-      }
-
-      const data = await response.json() as any;
-      const text = data?.choices?.[0]?.message?.content || '';
-      return { text, modelUsed: `external-agent:${model}` };
+    } catch (err: any) {
+      const message = err instanceof Error ? err.message : String(err);
+      throw new Error(`[AgentConfigManager] External agent call failed: ${message}`);
     }
   }
 }

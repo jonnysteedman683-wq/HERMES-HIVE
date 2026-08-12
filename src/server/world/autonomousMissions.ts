@@ -273,55 +273,65 @@ export class AutonomousMissionEngine {
   }
 
   private async analyzeAndPlan(missionId: string): Promise<void> {
-    const mission = this.activeMissions.get(missionId);
-    if (!mission) return;
+    try {
+      const mission = this.activeMissions.get(missionId);
+      if (!mission) return;
 
-    this.updateMissionState(missionId, 'ANALYZING');
-    
-    // Discover required capabilities
-    const decomposedSteps = this.decomposer.decompose(mission.objective);
-    const requiredCaps = new Set<string>();
-    decomposedSteps.forEach(s => s.requiredCapabilities.forEach(c => requiredCaps.add(c)));
-    mission.requiredCapabilities = Array.from(requiredCaps);
+      this.updateMissionState(missionId, 'ANALYZING');
 
-    this.updateMissionState(missionId, 'PLANNING');
-    mission.currentPlan = decomposedSteps.map(s => `${s.title}: ${s.description}`);
-    mission.decisions.push(`Decomposed objective into ${decomposedSteps.length} target steps`);
+      // Discover required capabilities
+      const decomposedSteps = this.decomposer.decompose(mission.objective);
+      const requiredCaps = new Set<string>();
+      decomposedSteps.forEach(s => s.requiredCapabilities.forEach(c => requiredCaps.add(c)));
+      mission.requiredCapabilities = Array.from(requiredCaps);
 
-    // Dynamic Multi-Hive allocation based on capabilities
-    const assignedHives = ['Hive-Alpha-Executive'];
-    if (mission.isResearchMission) {
-      assignedHives.push('Hive-Gamma-Researcher');
-    } else {
-      assignedHives.push('Hive-Beta-Engineer');
-    }
-    mission.assignedHives = assignedHives;
+      this.updateMissionState(missionId, 'PLANNING');
+      mission.currentPlan = decomposedSteps.map(s => `${s.title}: ${s.description}`);
+      mission.decisions.push(`Decomposed objective into ${decomposedSteps.length} target steps`);
 
-    // Check authorization boundary
-    let actionMaxLevel = 0;
-    let authRequired = false;
+      // Dynamic Multi-Hive allocation based on capabilities
+      const assignedHives = ['Hive-Alpha-Executive'];
+      if (mission.isResearchMission) {
+        assignedHives.push('Hive-Gamma-Researcher');
+      } else {
+        assignedHives.push('Hive-Beta-Engineer');
+      }
+      mission.assignedHives = assignedHives;
 
-    for (const capId of mission.requiredCapabilities) {
-      const cap = capabilityDiscoveryEngine.queryByIntent(capId)[0];
-      if (cap) {
-        const level = actionAuthorizationEngine.determineActionLevel(cap, cap.operations[0] || 'execute');
-        actionMaxLevel = Math.max(actionMaxLevel, level);
-        if (level >= 3) {
-          authRequired = true;
+      // Check authorization boundary
+      let actionMaxLevel = 0;
+      let authRequired = false;
+
+      for (const capId of mission.requiredCapabilities) {
+        const cap = capabilityDiscoveryEngine.queryByIntent(capId)[0];
+        if (cap) {
+          const level = actionAuthorizationEngine.determineActionLevel(cap, cap.operations[0] || 'execute');
+          actionMaxLevel = Math.max(actionMaxLevel, level);
+          if (level >= 3) {
+            authRequired = true;
+          }
         }
       }
-    }
 
-    if (authRequired) {
-      mission.decisions.push(`Awaiting formal authorization. Contains action steps of Level ${actionMaxLevel}`);
-      this.updateMissionState(missionId, 'AUTHORIZED'); // Authed for demo or standard runs
-    } else {
-      mission.decisions.push('Authorized automatically: Low risk action graph.');
-      this.updateMissionState(missionId, 'AUTHORIZED');
-    }
+      if (authRequired) {
+        mission.decisions.push(`Awaiting formal authorization. Contains action steps of Level ${actionMaxLevel}`);
+        this.updateMissionState(missionId, 'AUTHORIZED'); // Authed for demo or standard runs
+      } else {
+        mission.decisions.push('Authorized automatically: Low risk action graph.');
+        this.updateMissionState(missionId, 'AUTHORIZED');
+      }
 
-    // Spawn Core Mission Execution
-    this.executeMission(missionId, decomposedSteps);
+      // Spawn Core Mission Execution
+      this.executeMission(missionId, decomposedSteps);
+    } catch (err) {
+      const message = err instanceof Error ? err.message : String(err);
+      console.error(`[AutonomousMissionEngine] analyzeAndPlan failed for mission ${missionId}:`, message);
+      try {
+        this.updateMissionState(missionId, 'FAILED');
+      } catch (stateErr) {
+        console.error(`[AutonomousMissionEngine] Failed to mark mission ${missionId} as FAILED:`, stateErr);
+      }
+    }
   }
 
   private executeMission(
