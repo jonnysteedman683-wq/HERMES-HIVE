@@ -1,6 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { Agent, DiagnosticsMetrics, HiveEvent, Mission } from '../../../shared/types';
 import { SwarmTopology } from '../swarm/SwarmTopology';
+import { HexField } from '../ambience/HexField';
+import { useCountUp } from '../../hooks/useCountUp';
 import { Bot, Network, Target, Activity, Zap, Cpu, Award, Moon, Play, Clock, User, CheckCircle2, ShieldAlert, Sparkles, Plus, Edit2, Trash2, X, Settings } from 'lucide-react';
 
 interface QuickActionLog {
@@ -45,6 +47,19 @@ export const HiveDashboard: React.FC<HiveDashboardProps> = ({
 }) => {
   const activeMissions = missions.filter((m) => m.status === 'in_progress');
   const completedMissions = missions.filter((m) => m.status === 'completed');
+
+  // Real telemetry: diagnostics carry live totals; reputation is derived from
+  // the swarm's mission success rate when available, falling back to health.
+  const liveTokens = diagnostics?.totalTokensUsed ?? diagnostics?.totalAiRequests ?? 0;
+  const liveRep = Math.round(
+    diagnostics?.missionSuccessRatePct ?? diagnostics?.hiveHealthPct ?? 0
+  );
+
+  // Count-up animation targets (re-run whenever live values change).
+  const animatedAgents = useCountUp(agents.length, 1100);
+  const animatedMissions = useCountUp(completedMissions.length, 1100);
+  const animatedTokens = useCountUp(liveTokens, 1400);
+  const animatedRep = useCountUp(liveRep, 1100);
 
   const [quickActionHistory, setQuickActionHistory] = useState<QuickActionLog[]>([]);
   const [templates, setTemplates] = useState<QuickActionTemplate[]>([]);
@@ -175,65 +190,65 @@ export const HiveDashboard: React.FC<HiveDashboardProps> = ({
     <div className="h-full overflow-y-auto space-y-6 pr-1">
       {/* Top Quick Metrics */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-        <div className="p-4 rounded-xl bg-slate-950/60 border border-amber-500/12 hover:border-amber-500/30 glow-amber flex items-center gap-3 transition-all">
-          <div className="w-10 h-10 rounded-xl bg-amber-500/10 border border-amber-500/30 flex items-center justify-center text-amber-400">
+        <div className="border-anim p-4 flex items-center gap-3">
+          <div className="orb-amber w-11 h-11 rounded-xl flex items-center justify-center text-amber-300 shrink-0">
             <Network className="w-5 h-5" />
           </div>
           <div>
             <div className="text-[10px] font-mono text-slate-400 uppercase tracking-[0.2em]">Active Swarm</div>
-            <div className="text-lg font-light text-slate-100 font-mono">
-              {agents.length} <span className="text-xs font-normal text-slate-500">Agents</span>
+            <div className="text-2xl font-light text-grad-amber font-mono leading-tight">
+              {Math.round(animatedAgents)} <span className="text-xs font-normal text-slate-500">Agents</span>
             </div>
           </div>
         </div>
 
-        <div className="p-4 rounded-xl bg-slate-950/60 border border-emerald-500/12 hover:border-emerald-500/30 flex items-center gap-3 transition-all">
-          <div className="w-10 h-10 rounded-xl bg-emerald-500/10 border border-emerald-500/30 flex items-center justify-center text-emerald-400">
+        <div className="glass glass-hover p-4 flex items-center gap-3">
+          <div className="orb-emerald w-11 h-11 rounded-xl flex items-center justify-center text-emerald-300 shrink-0">
             <Target className="w-5 h-5" />
           </div>
           <div>
             <div className="text-[10px] font-mono text-slate-400 uppercase tracking-[0.2em]">Missions Done</div>
-            <div className="text-lg font-light text-slate-100 font-mono">
-              {completedMissions.length} <span className="text-xs font-normal text-slate-500">Completed</span>
+            <div className="text-2xl font-light text-emerald-300 font-mono leading-tight">
+              {Math.round(animatedMissions)} <span className="text-xs font-normal text-slate-500">Completed</span>
             </div>
           </div>
         </div>
 
-        <div className="p-4 rounded-xl bg-slate-950/60 border border-amber-500/12 hover:border-amber-500/30 flex items-center gap-3 transition-all">
-          <div className="w-10 h-10 rounded-xl bg-amber-500/10 border border-amber-500/30 flex items-center justify-center text-amber-400">
+        <div className="glass glass-hover p-4 flex items-center gap-3">
+          <div className="orb-amber w-11 h-11 rounded-xl flex items-center justify-center text-amber-300 shrink-0">
             <Zap className="w-5 h-5" />
           </div>
           <div>
             <div className="text-[10px] font-mono text-slate-400 uppercase tracking-[0.2em]">Tokens Processed</div>
-            <div className="text-lg font-light text-slate-100 font-mono">
-              {diagnostics?.totalTokensUsed || 14200} <span className="text-xs font-normal text-slate-500">Tokens</span>
+            <div className="text-2xl font-light text-grad-amber font-mono leading-tight">
+              {Math.round(animatedTokens).toLocaleString()} <span className="text-xs font-normal text-slate-500">Tokens</span>
             </div>
           </div>
         </div>
 
-        <div className="p-4 rounded-xl bg-slate-950/60 border border-purple-500/15 hover:border-purple-500/35 glow-violet flex items-center gap-3 transition-all">
-          <div className="w-10 h-10 rounded-xl bg-purple-500/10 border border-purple-500/30 flex items-center justify-center text-purple-400">
+        <div className="glass glass-hover p-4 flex items-center gap-3">
+          <div className="orb-violet w-11 h-11 rounded-xl flex items-center justify-center text-purple-300 shrink-0">
             <Award className="w-5 h-5" />
           </div>
           <div>
             <div className="text-[10px] font-mono text-slate-400 uppercase tracking-[0.2em]">Swarm Reputation</div>
-            <div className="text-lg font-light text-emerald-400 font-mono">
-              96 <span className="text-xs font-normal text-slate-500">/ 100</span>
+            <div className="text-2xl font-light text-grad-violet font-mono leading-tight">
+              {Math.round(animatedRep)} <span className="text-xs font-normal text-slate-500">/ 100</span>
             </div>
           </div>
         </div>
       </div>
 
       {/* Quick Actions Section */}
-      <div className="p-5 rounded-2xl bg-slate-950 border border-slate-800/80 shadow-xl space-y-4">
-        <div className="flex items-center justify-between border-b border-slate-800/80 pb-3">
+      <div className="glass p-5 space-y-4">
+        <div className="flex items-center justify-between border-b border-white/5 pb-3">
           <div className="flex items-center gap-2">
-            <div className="w-8 h-8 rounded-lg bg-cyan-500/10 border border-cyan-500/30 flex items-center justify-center text-cyan-400">
+            <div className="orb-amber w-8 h-8 rounded-lg flex items-center justify-center text-amber-300">
               <Zap className="w-4 h-4" />
             </div>
             <div>
-              <h3 className="text-xs font-mono font-bold text-slate-200 uppercase tracking-wider">Quick Actions & Swarm Templates</h3>
-              <p className="text-[11px] text-slate-400">Trigger or manage custom swarm orchestration templates</p>
+              <h3 className="text-xs font-mono font-semibold text-slate-200 uppercase tracking-[0.2em]">Quick Actions & Swarm Templates</h3>
+              <p className="text-[11px] font-light text-slate-400">Trigger or manage custom swarm orchestration templates</p>
             </div>
           </div>
           <div className="flex items-center gap-3">
@@ -244,7 +259,7 @@ export const HiveDashboard: React.FC<HiveDashboardProps> = ({
             )}
             <button
               onClick={openCreateModal}
-              className="px-3 py-1.5 rounded-lg bg-cyan-500/10 hover:bg-cyan-500/20 border border-cyan-500/30 text-cyan-400 text-xs font-mono flex items-center gap-1.5 transition-colors cursor-pointer"
+              className="px-3 py-1.5 rounded-lg bg-amber-500/10 hover:bg-amber-500/20 border border-amber-500/30 text-amber-300 text-xs font-mono flex items-center gap-1.5 transition-colors cursor-pointer"
             >
               <Plus className="w-3.5 h-3.5" /> Manage Templates
             </button>
@@ -255,14 +270,14 @@ export const HiveDashboard: React.FC<HiveDashboardProps> = ({
           {templates.map((tpl) => (
             <div
               key={tpl.id}
-              className="p-3.5 rounded-xl bg-slate-900/80 hover:bg-slate-900 border border-slate-800 hover:border-cyan-500/50 text-left transition-all group flex flex-col justify-between space-y-3 relative"
+              className="glass glass-hover p-3.5 text-left transition-all group flex flex-col justify-between space-y-3 relative"
             >
               <div className="flex items-center justify-between">
-                <div className="w-8 h-8 rounded-lg bg-cyan-500/10 text-cyan-400 flex items-center justify-center group-hover:scale-105 transition-transform">
+                <div className="orb-amber w-8 h-8 rounded-lg text-amber-300 flex items-center justify-center group-hover:scale-105 transition-transform">
                   {renderIcon(tpl.iconName)}
                 </div>
                 <div className="flex items-center gap-1">
-                  <span className="text-[10px] font-mono px-2 py-0.5 rounded bg-cyan-500/10 text-cyan-400 border border-cyan-500/20">{tpl.badge}</span>
+                  <span className="text-[10px] font-mono px-2 py-0.5 rounded bg-amber-500/10 text-amber-300 border border-amber-500/20">{tpl.badge}</span>
                   <button
                     onClick={() => openEditModal(tpl)}
                     className="p-1 rounded text-slate-400 hover:text-slate-200 hover:bg-slate-800 transition-colors cursor-pointer"
@@ -284,10 +299,10 @@ export const HiveDashboard: React.FC<HiveDashboardProps> = ({
                 disabled={triggeringScenario !== null}
                 className="text-left w-full cursor-pointer"
               >
-                <div className="text-xs font-bold text-slate-200 group-hover:text-cyan-300 transition-colors">{tpl.name}</div>
-                <div className="text-[11px] text-slate-400 mt-0.5 line-clamp-2">{tpl.prompt}</div>
+                <div className="text-xs font-semibold text-slate-200 group-hover:text-amber-300 transition-colors">{tpl.name}</div>
+                <div className="text-[11px] font-light text-slate-400 mt-0.5 line-clamp-2">{tpl.prompt}</div>
               </button>
-              <div className="text-[10px] font-mono text-cyan-400 flex items-center gap-1 pt-1">
+              <div className="text-[10px] font-mono text-amber-400 flex items-center gap-1 pt-1">
                 {triggeringScenario === tpl.scenario ? 'Triggering...' : 'Trigger Template →'}
               </div>
             </div>
@@ -402,38 +417,43 @@ export const HiveDashboard: React.FC<HiveDashboardProps> = ({
       )}
 
       {/* Main Center: Living Swarm Topology Visualizer */}
-      <SwarmTopology
-        agents={agents}
-        selectedAgents={selectedAgents}
-        onSelectAgent={onSelectAgent}
-        onSelectAgents={onSelectAgents}
-      />
+      <div className="relative glass overflow-hidden p-1">
+        <HexField className="absolute inset-0 w-full h-full opacity-70" density={1} />
+        <div className="relative">
+          <SwarmTopology
+            agents={agents}
+            selectedAgents={selectedAgents}
+            onSelectAgent={onSelectAgent}
+            onSelectAgents={onSelectAgents}
+          />
+        </div>
+      </div>
 
       {/* Bottom Grid: Active Missions, Quick Action History & Real-Time Event Feed */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* Active Missions Progress Widget */}
-        <div className="p-5 rounded-2xl bg-slate-950 border border-slate-800/80 shadow-xl space-y-3">
-          <div className="flex items-center justify-between border-b border-slate-800/80 pb-3">
-            <h3 className="text-xs font-mono font-bold text-slate-300 uppercase tracking-wider flex items-center gap-2">
-              <Target className="w-4 h-4 text-cyan-400" /> Active Missions
+        <div className="glass p-5 space-y-3">
+          <div className="flex items-center justify-between border-b border-white/5 pb-3">
+            <h3 className="text-xs font-mono font-semibold text-slate-300 uppercase tracking-[0.2em] flex items-center gap-2">
+              <Target className="w-4 h-4 text-amber-400" /> Active Missions
             </h3>
             <span className="text-[10px] font-mono text-slate-500">{activeMissions.length} Running</span>
           </div>
 
           <div className="space-y-3 max-h-56 overflow-y-auto pr-1">
             {activeMissions.length === 0 ? (
-              <div className="text-xs text-slate-500 italic p-4 text-center border border-dashed border-slate-800 rounded-xl">
+              <div className="text-xs text-slate-500 italic p-4 text-center border border-dashed border-white/10 rounded-xl">
                 No active missions currently executing. Click any quick action above to launch a swarm mission.
               </div>
             ) : (
               activeMissions.map((m) => (
-                <div key={m.id} className="p-3.5 rounded-xl bg-slate-900/70 border border-slate-800 text-xs space-y-2">
+                <div key={m.id} className="p-3.5 rounded-xl bg-slate-800/30 border border-white/5 text-xs space-y-2">
                   <div className="flex items-center justify-between">
                     <span className="font-bold text-slate-200 truncate max-w-[80%]">{m.objective}</span>
-                    <span className="font-mono text-cyan-400 font-bold">{m.progress}%</span>
+                    <span className="font-mono text-amber-400 font-bold">{m.progress}%</span>
                   </div>
-                  <div className="w-full bg-slate-800 h-1.5 rounded-full overflow-hidden">
-                    <div className="bg-cyan-400 h-full transition-all duration-300" style={{ width: `${m.progress}%` }} />
+                  <div className="w-full bg-slate-700/40 h-1.5 rounded-full overflow-hidden">
+                    <div className="bg-gradient-to-r from-amber-500/70 to-amber-400 h-full transition-all duration-300" style={{ width: `${m.progress}%` }} />
                   </div>
                 </div>
               ))
@@ -442,9 +462,9 @@ export const HiveDashboard: React.FC<HiveDashboardProps> = ({
         </div>
 
         {/* Scrollable Quick Action Triggers History */}
-        <div className="p-5 rounded-2xl bg-slate-950 border border-slate-800/80 shadow-xl space-y-3">
-          <div className="flex items-center justify-between border-b border-slate-800/80 pb-3">
-            <h3 className="text-xs font-mono font-bold text-slate-300 uppercase tracking-wider flex items-center gap-2">
+        <div className="glass p-5 space-y-3">
+          <div className="flex items-center justify-between border-b border-white/5 pb-3">
+            <h3 className="text-xs font-mono font-semibold text-slate-300 uppercase tracking-[0.2em] flex items-center gap-2">
               <Clock className="w-4 h-4 text-purple-400" /> Action History
             </h3>
             <span className="text-[10px] font-mono text-purple-400 font-bold">{quickActionHistory.length} Triggers</span>
@@ -452,12 +472,12 @@ export const HiveDashboard: React.FC<HiveDashboardProps> = ({
 
           <div className="space-y-2.5 max-h-56 overflow-y-auto pr-1">
             {quickActionHistory.length === 0 ? (
-              <div className="text-xs text-slate-500 italic p-4 text-center border border-dashed border-slate-800 rounded-xl">
+              <div className="text-xs text-slate-500 italic p-4 text-center border border-dashed border-white/10 rounded-xl">
                 No quick actions triggered yet.
               </div>
             ) : (
               quickActionHistory.map((item) => (
-                <div key={item.id} className="p-3 rounded-xl bg-slate-900/80 border border-slate-800 text-xs space-y-1.5">
+                <div key={item.id} className="p-3 rounded-xl bg-slate-800/30 border border-white/5 text-xs space-y-1.5">
                   <div className="flex items-center justify-between">
                     <span className="font-bold text-slate-200 truncate">{item.templateName}</span>
                     <span className="text-[10px] font-mono text-slate-400 shrink-0">
@@ -465,7 +485,7 @@ export const HiveDashboard: React.FC<HiveDashboardProps> = ({
                     </span>
                   </div>
                   <div className="text-[10px] font-mono text-slate-400 flex items-center gap-1.5 truncate">
-                    <User className="w-3 h-3 text-cyan-400 shrink-0" />
+                    <User className="w-3 h-3 text-amber-400 shrink-0" />
                     <span className="truncate text-slate-300">{item.initiatedBy}</span>
                   </div>
                 </div>
@@ -475,19 +495,19 @@ export const HiveDashboard: React.FC<HiveDashboardProps> = ({
         </div>
 
         {/* Real-time Hive Event Feed */}
-        <div className="p-5 rounded-2xl bg-slate-950 border border-slate-800/80 shadow-xl space-y-3">
-          <div className="flex items-center justify-between border-b border-slate-800/80 pb-3">
-            <h3 className="text-xs font-mono font-bold text-slate-300 uppercase tracking-wider flex items-center gap-2">
+        <div className="glass p-5 space-y-3">
+          <div className="flex items-center justify-between border-b border-white/5 pb-3">
+            <h3 className="text-xs font-mono font-semibold text-slate-300 uppercase tracking-[0.2em] flex items-center gap-2">
               <Activity className="w-4 h-4 text-emerald-400" /> Event Stream
             </h3>
             <span className="text-[10px] font-mono text-emerald-400 font-bold flex items-center gap-1">
-              <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" /> LIVE
+              <span className="w-2 h-2 rounded-full bg-emerald-400 heartbeat" /> LIVE
             </span>
           </div>
 
           <div className="space-y-2 max-h-56 overflow-y-auto pr-1">
             {events.slice(0, 6).map((evt) => (
-              <div key={evt.id} className="p-2.5 rounded-lg bg-slate-900/80 border border-slate-800 text-[11px] font-mono flex items-center justify-between">
+              <div key={evt.id} className="p-2.5 rounded-lg bg-slate-800/30 border border-white/5 text-[11px] font-mono flex items-center justify-between">
                 <div className="flex items-center gap-2 truncate">
                   <span
                     className={`w-2 h-2 rounded-full shrink-0 ${

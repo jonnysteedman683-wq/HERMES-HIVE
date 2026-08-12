@@ -80,7 +80,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
   ];
 
   return (
-    <aside className="w-64 bg-slate-950/80 backdrop-blur-sm border-r border-amber-500/10 flex flex-col justify-between shrink-0 select-none">
+    <aside className="glass w-64 flex flex-col justify-between shrink-0 select-none" style={{ borderRadius: 0, borderRight: '1px solid rgba(255,179,71,0.12)' }}>
       <div>
         {/* Brand Header */}
         <div className="p-5 border-b border-amber-500/10 flex items-center justify-between bg-gradient-to-r from-amber-950/20 via-slate-950/40 to-transparent">

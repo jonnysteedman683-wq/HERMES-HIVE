@@ -27,9 +27,18 @@ import { SuprimeSwarmView } from './client/components/suprime/SuprimeSwarmView';
 import { BackendsView } from './client/components/backends/BackendsView';
 import { SwarmMonitor } from './client/components/swarm/SwarmMonitor';
 import { HiveAmbience } from './client/components/layout/HiveAmbience';
+import { HiveThemeProvider } from './client/theme/HiveTheme';
 import { Agent } from './shared/types';
 
 export default function App() {
+  return (
+    <HiveThemeProvider>
+      <HiveApp />
+    </HiveThemeProvider>
+  );
+}
+
+function HiveApp() {
   const [activeTab, setActiveTab] = useState<TabType>('dashboard');
   const [selectedAgent, setSelectedAgent] = useState<Agent | null>(null);
   const [selectedAgents, setSelectedAgents] = useState<Agent[]>([]);
@@ -125,7 +134,7 @@ export default function App() {
           commandInputRef={commandInputRef}
         />
 
-        <main className="flex-1 p-6 overflow-hidden bg-slate-900/40 relative">
+        <main className="flex-1 p-6 overflow-hidden bg-transparent relative">
           {activeTab === 'dashboard' && (
             <HiveDashboard
               agents={agents}
