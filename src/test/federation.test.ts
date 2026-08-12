@@ -9,7 +9,7 @@ declare module 'bun:test' {
   export { expect };
 }
 
-import { describe, it, expect, beforeEach } from 'bun:test';
+import { describe, it, expect, beforeEach } from 'vitest';
 import { federatedConsensusEngine } from '../server/federation/federatedConsensusEngine';
 import { federatedTaskEngine } from '../server/federation/federatedTaskEngine';
 import { federationGovernance } from '../server/federation/federationGovernance';
