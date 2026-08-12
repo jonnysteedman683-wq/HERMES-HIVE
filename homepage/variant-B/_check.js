@@ -1,0 +1,546 @@
+
+(function () {
+  'use strict';
+
+  var canvas = document.getElementById('hive');
+  if (!canvas) return;
+  var ctx = canvas.getContext('2d');
+  if (!ctx) return;
+
+  /* ================= tokens ================= */
+  var AMBER  = { r: 255, g: 180, b: 94  };
+  var EMBER  = { r: 255, g: 122, b: 47  };
+  var VIOLET = { r: 167, g: 139, b: 250 };
+  var VDEP   = { r: 109, g: 79,  b: 208 };
+  var INK    = { r: 244, g: 236, b: 221 };
+
+  var FONT = "'Segoe UI',system-ui,-apple-system,'Helvetica Neue',Arial,sans-serif";
+  var PI = Math.PI, TAU = PI * 2;
+  var reduceMotion = !!(window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches);
+  var motion = reduceMotion ? 0.12 : 1;         // master motion scale
+  var ROT_SPEED = 0.10;                         // rad/s — one full turn ~63s
+  var HB = 2.6;                                 // heartbeat period (s)
+  var ripplesEnabled = !reduceMotion;
+
+  function rgba(c, a) { return 'rgba(' + c.r + ',' + c.g + ',' + c.b + ',' + a + ')'; }
+  function clamp(v, lo, hi) { return v < lo ? lo : (v > hi ? hi : v); }
+  function angDiff(a, b) { var d = (a - b) % TAU; if (d > PI) d -= TAU; if (d < -PI) d += TAU; return d; }
+  function ease(x) { return x < 0.5 ? 2 * x * x : 1 - Math.pow(-2 * x + 2, 2) / 2; }
+
+  /* ================= state ================= */
+  var W = 0, H = 0, DPR = 1;
+  var base = { x: 0, y: 0 };        // lattice center (no parallax)
+  var parallax = { x: 0, y: 0 };    // current offset
+  var target = { x: 0, y: 0 };      // mouse target offset
+  var R = 300, coreR = 140, cellCore = 50, cellOuter = 42, orbR = 60, glowR = 160;
+  var nodes = [];                   // {ring:0 core|1 outer, idx, label, font, color}
+  var edges = [];                   // {a,b,violet}
+  var spokes = [];
+  var stars = [], motes = [], dust = [], drift = [], ripples = [];
+  var nodeFlash = [];
+  var sprGlow = null, sprOrb = null, sprMoteA = null, sprMoteV = null, sprDust = null;
+  var t0 = performance.now(), last = 0, running = false, rafId = 0, firstFrame = true;
+  var envV = 0, heartBeat = 1, heartPrev = 0;
+  var CORE_NAMES = ['HERMES-HIVE', 'GTDown', 'gtdown-obsidian', 'sentinel-main'];
+  var CORE_SHORT = ['HIVE', 'GTD', 'GT-OB', 'SENT'];
+
+  /* ================= sprites (pre-rendered glow, no shadowBlur per frame) ================= */
+  function makeSprite(size, stops) {
+    var c = document.createElement('canvas');
+    c.width = c.height = size;
+    var g = c.getContext('2d');
+    var gr = g.createRadialGradient(size / 2, size / 2, 0, size / 2, size / 2, size / 2);
+    for (var i = 0; i < stops.length; i++) gr.addColorStop(stops[i][0], stops[i][1]);
+    g.fillStyle = gr;
+    g.fillRect(0, 0, size, size);
+    return c;
+  }
+  function buildSprites() {
+    sprGlow  = makeSprite(256, [[0, 'rgba(255,206,140,0.85)'], [0.22, 'rgba(255,150,70,0.34)'],
+                                [0.5, 'rgba(150,100,240,0.16)'], [1, 'rgba(150,100,240,0)']]);
+    sprOrb   = makeSprite(128, [[0, 'rgba(255,248,232,1)'], [0.32, 'rgba(255,190,110,0.95)'],
+                                [0.66, 'rgba(255,122,47,0.30)'], [1, 'rgba(255,122,47,0)']]);
+    sprMoteA = makeSprite(32,  [[0, 'rgba(255,226,178,0.95)'], [0.45, 'rgba(255,160,80,0.30)'], [1, 'rgba(255,160,80,0)']]);
+    sprMoteV = makeSprite(32,  [[0, 'rgba(226,214,255,0.95)'], [0.45, 'rgba(167,139,250,0.30)'], [1, 'rgba(167,139,250,0)']]);
+    sprDust  = makeSprite(96,  [[0, 'rgba(168,140,244,0.42)'], [0.5, 'rgba(120,90,220,0.12)'], [1, 'rgba(120,90,220,0)']]);
+  }
+
+  /* ================= geometry ================= */
+  function fitFont(label, maxW, startPx, minPx) {
+    var p = startPx;
+    while (p > minPx) {
+      ctx.save();
+      ctx.font = '300 ' + p + 'px ' + FONT;
+      var w = ctx.measureText(label).width;
+      ctx.restore();
+      if (w <= maxW) break;
+      p -= 0.5;
+    }
+    return p;
+  }
+
+  function buildGeometry() {
+    R = clamp(Math.min(W, H) * (W < 640 ? 0.30 : 0.27), 120, 380);
+    coreR    = R * 0.47;
+    cellCore = R * 0.17;
+    cellOuter = R * 0.145;
+    orbR     = R * 0.20;
+    glowR    = R * 0.55;
+    base.x = W / 2;
+    base.y = H * 0.635;
+
+    nodes = [];
+    var i;
+    for (i = 0; i < 4; i++) {                       // core: 4 repo cells
+      var full = CORE_NAMES[i], short = CORE_SHORT[i];
+      var useFull = cellCore >= 36, useShort = cellCore >= 24;
+      var label = useFull ? full : (useShort ? short : '');
+      var startPx = useFull ? cellCore * 0.42 : cellCore * 0.38;
+      var fontPx = label ? fitFont(label, cellCore * 1.30, startPx, 6) : 0;
+      nodes.push({
+        ring: 0, idx: i, label: label,
+        angle0: PI / 4 + i * PI / 2,
+        font: '300 ' + fontPx + 'px ' + FONT,
+        color: AMBER, dot: !label
+      });
+    }
+    for (i = 0; i < 9; i++) {                       // outer: 9 agent nodes
+      var num = String(i + 1).padStart(2, '0');
+      var showNum = cellOuter >= 17;
+      var fp = showNum ? fitFont(num, cellOuter * 1.25, Math.min(cellOuter * 0.5, 13), 6) : 0;
+      nodes.push({
+        ring: 1, idx: 4 + i, label: showNum ? num : '',
+        angle0: -PI / 2 + i * TAU / 9,
+        font: '300 ' + fp + 'px ' + FONT,
+        color: VIOLET, dot: !showNum
+      });
+    }
+    nodeFlash = new Array(nodes.length).fill(0);
+
+    edges = [];
+    for (i = 0; i < 9; i++) edges.push({ a: 4 + i, b: 4 + (i + 1) % 9, violet: true });   // outer ring
+    for (i = 0; i < 4; i++) edges.push({ a: i, b: (i + 1) % 4, violet: false });          // core ring
+    spokes = [];
+    for (i = 0; i < 9; i++) {                                                             // repo<->agent spokes
+      var oa = -PI / 2 + i * TAU / 9, best = 0, bd = 1e9;
+      for (var j = 0; j < 4; j++) {
+        var d = Math.abs(angDiff(oa, PI / 4 + j * PI / 2));
+        if (d < bd) { bd = d; best = j; }
+      }
+      spokes.push({ a: 4 + i, b: best });
+      edges.push({ a: 4 + i, b: best, violet: false });
+    }
+
+    /* starfield / dust / fireflies — regenerate on resize */
+    var area = W * H, i2;
+    stars = [];
+    var nStars = clamp(Math.round(area / 14000), 80, 190);
+    for (i2 = 0; i2 < nStars; i2++) {
+      stars.push({ x: Math.random() * W, y: Math.random() * H,
+                   r: 0.4 + Math.random() * 1.1, ph: Math.random() * TAU,
+                   sp: 0.25 + Math.random() * 0.7, warm: Math.random() < 0.42 });
+    }
+    dust = [];
+    for (i2 = 0; i2 < 9; i2++) {
+      dust.push({ x: Math.random() * W, y: Math.random() * H,
+                  r: 40 + Math.random() * 90, ph: Math.random() * TAU,
+                  sp: 0.05 + Math.random() * 0.08, vy: 7 + Math.random() * 9 });
+    }
+    motes = [];
+    var nMotes = clamp(Math.round(area / 26000), 34, 96);
+    for (i2 = 0; i2 < nMotes; i2++) {
+      motes.push(makeMote(true));
+    }
+    drift = [];
+    for (i2 = 0; i2 < 3; i2++) {
+      var m = makeMote(false);
+      m.dur = 5 + Math.random() * 4;
+      m.t = Math.random() * m.dur;
+      drift.push(m);
+    }
+    ripples = [];
+    heartPrev = 0;
+  }
+
+  function randNode(excludeRing) {
+    var pool = [];
+    for (var i = 0; i < nodes.length; i++) if (nodes[i].ring !== excludeRing) pool.push(i);
+    return pool[(Math.random() * pool.length) | 0];
+  }
+  function makeMote(isFirefly) {
+    return {
+      a: randNode(0), b: randNode(1),
+      t: Math.random(), dur: isFirefly ? 2.4 + Math.random() * 3.6 : 6,
+      wob: Math.random() * TAU, wobSp: 1.8 + Math.random() * 1.6,
+      tw: Math.random() * TAU, size: isFirefly ? 1.0 + Math.random() * 1.5 : 5 + Math.random() * 3,
+      violet: Math.random() < (isFirefly ? 0.42 : 1),
+      px: 0, py: 0
+    };
+  }
+
+  /* ================= layout ================= */
+  function nodePos(n, theta) {
+    var r = n.ring === 0 ? coreR : R;
+    var a = n.angle0 + theta;
+    return {
+      x: base.x + parallax.x + Math.cos(a) * r,
+      y: base.y + parallax.y + Math.sin(a) * r * 0.985
+    };
+  }
+
+  /* ================= heartbeat ================= */
+  function heart(t) {
+    var p = (t % HB) / HB;
+    var g1 = Math.exp(-((p - 0.00) / 0.050) * ((p - 0.00) / 0.050));
+    var g2 = Math.exp(-((p - 0.32) / 0.055) * ((p - 0.32) / 0.055));
+    if (g1 >= g2) return { v: 0.9 * g1, b: 1 };
+    return { v: 0.72 * g2, b: 2 };
+  }
+
+  function spawnRipple(beat) {
+    if (ripples.length >= 6) return;
+    ripples.push({
+      r: orbR * 1.15, r0: orbR * 1.15,
+      v: R * (beat === 1 ? 0.34 : 0.27),
+      col: beat === 1 ? AMBER : VIOLET, a: 0.9
+    });
+  }
+
+  /* ================= drawing ================= */
+  function hexPath(x, y, r) {
+    ctx.beginPath();
+    for (var k = 0; k < 6; k++) {
+      var a = -PI / 2 + k * PI / 3;
+      var px = x + r * Math.cos(a), py = y + r * Math.sin(a);
+      if (k === 0) ctx.moveTo(px, py); else ctx.lineTo(px, py);
+    }
+    ctx.closePath();
+  }
+  function line(ax, ay, bx, by) {
+    ctx.beginPath();
+    ctx.moveTo(ax, ay);
+    ctx.lineTo(bx, by);
+    ctx.stroke();
+  }
+
+  function drawStars(t) {
+    for (var i = 0; i < stars.length; i++) {
+      var s = stars[i];
+      var a = 0.14 + 0.5 * (0.5 + 0.5 * Math.sin(t * s.sp + s.ph));
+      ctx.fillStyle = s.warm ? 'rgba(255,216,170,' + a + ')' : 'rgba(205,196,255,' + (a * 0.8) + ')';
+      ctx.fillRect(s.x, s.y, s.r, s.r);
+    }
+  }
+
+  function drawDust(t) {
+    for (var i = 0; i < dust.length; i++) {
+      var d = dust[i];
+      ctx.globalAlpha = 0.05 + 0.025 * Math.sin(t * d.sp + d.ph);
+      ctx.drawImage(sprDust, d.x - d.r, d.y - d.r, d.r * 2, d.r * 2);
+      ctx.globalAlpha = 1;
+    }
+  }
+
+  function drawLattice(theta, t) {
+    var i, e, pa, pb, mx, my, d, pulse, wave, g, a, col;
+    /* edges */
+    for (i = 0; i < edges.length; i++) {
+      e = edges[i];
+      pa = nodePos(nodes[e.a], theta); pb = nodePos(nodes[e.b], theta);
+      /* lattice lines connect hex RIMS, never crossing cell interiors or labels */
+      var dlen = Math.hypot(pb.x - pa.x, pb.y - pa.y) || 1;
+      var kA = (nodes[e.a].ring === 0 ? cellCore : cellOuter) / dlen;
+      var kB = (nodes[e.b].ring === 0 ? cellCore : cellOuter) / dlen;
+      pa = { x: pa.x + (pb.x - pa.x) * kA, y: pa.y + (pb.y - pa.y) * kA };
+      pb = { x: pb.x + (pa.x - pb.x) * kB, y: pb.y + (pa.y - pb.y) * kB };
+      mx = (pa.x + pb.x) / 2; my = (pa.y + pb.y) / 2;
+      d = Math.hypot(mx - base.x - parallax.x, my - base.y - parallax.y);
+      pulse = envV * Math.exp(-(d * d) / ((R * 0.45) * (R * 0.45)));
+      wave = 0;
+      for (var k = 0; k < ripples.length; k++) {
+        var rr = ripples[k];
+        var wd = (rr.r - d) / (R * 0.10);
+        wave += Math.exp(-wd * wd) * rr.a;
+      }
+      g = Math.min(1, pulse + wave * 1.15);
+      col = e.violet ? VIOLET : AMBER;
+      if (g > 0.12) {
+        ctx.strokeStyle = rgba(e.violet ? VDEP : EMBER, g * 0.22);
+        ctx.lineWidth = 3.4 + g * 2.2;
+        line(pa.x, pa.y, pb.x, pb.y);
+      }
+      a = Math.min(1, (e.violet ? 0.13 : 0.19) + g * 0.85);
+      ctx.strokeStyle = rgba(col, a);
+      ctx.lineWidth = 1 + g * 1.5;
+      line(pa.x, pa.y, pb.x, pb.y);
+    }
+
+    /* nodes + labels */
+    for (i = 0; i < nodes.length; i++) {
+      var n = nodes[i], pos = nodePos(n, theta);
+      var fl = nodeFlash[i];
+      var baseA = n.ring === 0 ? 0.40 : 0.33;
+      var na = Math.min(1, baseA + fl * 0.85 + (n.ring === 0 ? envV * 0.22 : envV * 0.10));
+      var nr = n.ring === 0 ? cellCore : cellOuter;
+      ctx.strokeStyle = rgba(n.color, na);
+      ctx.lineWidth = 1.1 + fl * 1.5;
+      ctx.fillStyle = rgba(n.color, 0.05 + fl * 0.07 + (n.ring === 0 ? envV * 0.05 : 0));
+      hexPath(pos.x, pos.y, nr);
+      ctx.fill();
+      ctx.stroke();
+
+      if (n.label) {
+        ctx.save();
+        ctx.translate(pos.x, pos.y);
+        /* labels stay upright at all times — the lattice rotates beneath them */
+        ctx.font = n.font;
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        if ('letterSpacing' in ctx) ctx.letterSpacing = n.ring === 0 ? '0.06em' : '0.1em';
+        /* dark halo so lattice lines never cut through the text */
+        ctx.lineWidth = 3;
+        ctx.lineJoin = 'round';
+        ctx.strokeStyle = 'rgba(7,4,11,0.82)';
+        ctx.strokeText(n.label, 0, 0);
+        ctx.fillStyle = n.ring === 0 ? 'rgba(246,238,220,0.9)' : 'rgba(196,182,220,0.74)';
+        ctx.fillText(n.label, 0, 0);
+        ctx.restore();
+      } else if (n.dot) {
+        ctx.fillStyle = rgba(n.color, 0.55 + fl * 0.4);
+        ctx.beginPath();
+        ctx.arc(pos.x, pos.y, 1.6, 0, TAU);
+        ctx.fill();
+      }
+    }
+  }
+
+  function drawRipples(t) {
+    for (var i = 0; i < ripples.length; i++) {
+      var rr = ripples[i];
+      if (rr.a <= 0.02) continue;
+      ctx.strokeStyle = rgba(rr.col, rr.a * 0.34);
+      ctx.lineWidth = 1.1 + rr.a * 2.0;
+      ctx.beginPath();
+      ctx.arc(base.x + parallax.x, base.y + parallax.y, rr.r, 0, TAU);
+      ctx.stroke();
+    }
+  }
+
+  function drawOrb(t) {
+    var cx = base.x + parallax.x, cy = base.y + parallax.y;
+    var s = 1 + 0.055 * envV;
+    var gs = 1 + 0.22 * envV;
+    ctx.drawImage(sprGlow, cx - glowR * gs, cy - glowR * gs, glowR * 2 * gs, glowR * 2 * gs);
+    /* breathing membrane rings */
+    ctx.strokeStyle = rgba(AMBER, 0.16 + 0.26 * envV);
+    ctx.lineWidth = 1.2;
+    ctx.beginPath();
+    ctx.arc(cx, cy, orbR * (1.34 + 0.09 * envV), 0, TAU);
+    ctx.stroke();
+    ctx.strokeStyle = rgba(VIOLET, 0.08 + 0.12 * envV);
+    ctx.lineWidth = 1;
+    ctx.beginPath();
+    ctx.arc(cx, cy, orbR * (1.66 + 0.05 * envV), 0, TAU);
+    ctx.stroke();
+    /* hot core */
+    ctx.drawImage(sprOrb, cx - orbR * s, cy - orbR * s, orbR * 2 * s, orbR * 2 * s);
+    /* glint */
+    ctx.fillStyle = 'rgba(255,246,224,' + (0.5 + 0.4 * envV) + ')';
+    ctx.beginPath();
+    ctx.arc(cx - orbR * 0.22, cy - orbR * 0.24, orbR * (0.07 + 0.03 * envV), 0, TAU);
+    ctx.fill();
+  }
+
+  function drawMotes(t) {
+    var i, m, pa, pb, x, y, tw, dirx, diry;
+    for (i = 0; i < motes.length; i++) {
+      m = motes[i];
+      pa = nodePos(nodes[m.a], theta); pb = nodePos(nodes[m.b], theta);
+      var k = ease(clamp(m.t / m.dur, 0, 1));
+      dirx = pb.x - pa.x; diry = pb.y - pa.y;
+      var len = Math.hypot(dirx, diry) || 1;
+      var ox = -diry / len, oy = dirx / len;
+      var sway = Math.sin(m.t * m.wobSp + m.wob) * Math.min(9, R * 0.05) * Math.sin(PI * k);
+      x = pa.x + dirx * k + ox * sway;
+      y = pa.y + diry * k + oy * sway;
+      tw = 0.3 + 0.7 * (0.5 + 0.5 * Math.sin(m.t * 1.9 + m.tw));
+      if (m.px) {
+        ctx.strokeStyle = m.violet ? 'rgba(167,139,250,' + (tw * 0.28) + ')' : 'rgba(255,170,90,' + (tw * 0.3) + ')';
+        ctx.lineWidth = 1;
+        line(m.px, m.py, x, y);
+      }
+      m.px = x; m.py = y;
+      var s = m.size * 3.4 * (1 + 0.35 * tw);
+      ctx.globalAlpha = tw;
+      ctx.drawImage(m.violet ? sprMoteV : sprMoteA, x - s / 2, y - s / 2, s, s);
+      ctx.globalAlpha = 1;
+    }
+    /* larger drifting orbs */
+    for (i = 0; i < drift.length; i++) {
+      m = drift[i];
+      pa = nodePos(nodes[m.a], theta); pb = nodePos(nodes[m.b], theta);
+      k = ease(clamp(m.t / m.dur, 0, 1));
+      dirx = pb.x - pa.x; diry = pb.y - pa.y;
+      len = Math.hypot(dirx, diry) || 1;
+      ox = -diry / len; oy = dirx / len;
+      sway = Math.sin(m.t * 0.9 + m.wob) * Math.min(14, R * 0.07) * Math.sin(PI * k);
+      x = pa.x + dirx * k + ox * sway;
+      y = pa.y + diry * k + oy * sway;
+      tw = 0.3 + 0.25 * Math.sin(m.t * 1.1 + m.tw);
+      m.px = x; m.py = y;
+      var ds = m.size * 2.6;
+      ctx.globalAlpha = 0.22 + 0.2 * tw;
+      ctx.drawImage(sprMoteV, x - ds / 2, y - ds / 2, ds, ds);
+      ctx.globalAlpha = 1;
+    }
+  }
+
+  /* ================= update ================= */
+  function update(dt, t) {
+    var i;
+    var h = heart(t);
+    envV = h.v;
+    if (ripplesEnabled) {
+      if (h.v >= 0.45 && heartPrev < 0.45) spawnRipple(h.b);
+    }
+    heartPrev = h.v;
+    for (i = ripples.length - 1; i >= 0; i--) {
+      var rr = ripples[i];
+      rr.r += rr.v * dt;
+      rr.a = 0.9 * Math.exp(-(rr.r - rr.r0) / (R * 0.8));
+      if (rr.r > R * 1.45 || rr.a < 0.02) ripples.splice(i, 1);
+    }
+    for (i = 0; i < nodes.length; i++) {
+      var pos = nodePos(nodes[i], theta);
+      var d = Math.hypot(pos.x - base.x - parallax.x, pos.y - base.y - parallax.y);
+      var f = 0;
+      for (var k = 0; k < ripples.length; k++) {
+        var wd = (ripples[k].r - d) / (R * 0.075);
+        f += Math.exp(-wd * wd) * ripples[k].a;
+      }
+      nodeFlash[i] = nodeFlash[i] * Math.exp(-dt * 2.0) + f * 0.75;
+    }
+    for (i = 0; i < motes.length; i++) {
+      motes[i].t += dt * motion;
+      if (motes[i].t > motes[i].dur) {
+        motes[i].t = 0;
+        motes[i].a = motes[i].b;
+        motes[i].b = randNode(nodes[motes[i].a].ring);
+        motes[i].px = 0; motes[i].py = 0;
+      }
+    }
+    for (i = 0; i < drift.length; i++) {
+      drift[i].t += dt * motion;
+      if (drift[i].t > drift[i].dur) {
+        drift[i].t = 0;
+        drift[i].a = drift[i].b;
+        drift[i].b = randNode(nodes[drift[i].a].ring);
+        drift[i].px = 0; drift[i].py = 0;
+      }
+    }
+    for (i = 0; i < dust.length; i++) {
+      dust[i].y -= dust[i].vy * dt * motion;
+      if (dust[i].y < -dust[i].r) { dust[i].y = H + dust[i].r; dust[i].x = Math.random() * W; }
+    }
+    parallax.x += (target.x - parallax.x) * 0.045;
+    parallax.y += (target.y - parallax.y) * 0.045;
+  }
+
+  /* ================= main loop ================= */
+  var theta = 0;
+  function frame(now) {
+    if (!running) return;
+    var dt = Math.min(0.05, (now - last) / 1000);
+    last = now;
+    var t = (now - t0) / 1000;
+    theta = t * ROT_SPEED * motion;
+    update(dt, t);
+
+    ctx.clearRect(0, 0, W, H);
+    drawStars(t);
+    drawDust(t);
+    drawLattice(theta, t);
+    drawRipples(t);
+    drawOrb(t);
+    drawMotes(t);
+
+    if (firstFrame) {
+      firstFrame = false;
+      try {
+        window.__hiveReady = true;
+        window.__hive = { nodes: nodes.length, edges: edges.length, motes: motes.length };
+      } catch (e) { /* noop */ }
+    }
+    try {
+      window.__hivePos = nodes.map(function (n) { return nodePos(n, theta); });
+    } catch (e) { /* noop */ }
+    rafId = requestAnimationFrame(frame);
+  }
+
+  /* ================= lifecycle ================= */
+  function resize() {
+    W = window.innerWidth; H = window.innerHeight;
+    DPR = Math.min(2, window.devicePixelRatio || 1);
+    canvas.width = Math.round(W * DPR);
+    canvas.height = Math.round(H * DPR);
+    canvas.style.width = W + 'px';
+    canvas.style.height = H + 'px';
+    ctx.setTransform(DPR, 0, 0, DPR, 0, 0);
+    buildGeometry();
+  }
+
+  var rt;
+  window.addEventListener('resize', function () {
+    clearTimeout(rt);
+    rt = setTimeout(resize, 150);
+  });
+  window.addEventListener('orientationchange', function () { clearTimeout(rt); rt = setTimeout(resize, 250); });
+
+  var coarse = !!(window.matchMedia && window.matchMedia('(pointer: coarse)').matches);
+  if (!reduceMotion && !coarse) {
+    window.addEventListener('mousemove', function (e) {
+      target.x = (e.clientX / W - 0.5) * 26;
+      target.y = (e.clientY / H - 0.5) * 18;
+    });
+  }
+
+  document.addEventListener('visibilitychange', function () {
+    if (document.hidden) {
+      running = false;
+      cancelAnimationFrame(rafId);
+    } else if (!running) {
+      running = true;
+      last = performance.now();
+      rafId = requestAnimationFrame(frame);
+    }
+  });
+
+  /* film grain tile (self-contained, generated once) */
+  try {
+    var g = document.createElement('canvas');
+    g.width = g.height = 128;
+    var gc = g.getContext('2d');
+    var id = gc.createImageData(128, 128);
+    var dd = id.data;
+    for (var i = 0; i < dd.length; i += 4) {
+      var v = (Math.random() * 255) | 0;
+      dd[i] = dd[i + 1] = dd[i + 2] = v;
+      dd[i + 3] = 20;
+    }
+    gc.putImageData(id, 0, 0);
+    var grainEl = document.getElementById('grain');
+    if (grainEl) grainEl.style.backgroundImage = 'url(' + g.toDataURL() + ')';
+  } catch (e) { /* grain is decorative; skip on failure */ }
+
+  /* CTA — demo action, no navigation */
+  var btn = document.getElementById('enterBtn');
+  if (btn) btn.addEventListener('click', function () {
+    btn.blur();
+  });
+
+  buildSprites();
+  resize();
+  running = true;
+  last = performance.now();
+  rafId = requestAnimationFrame(frame);
+})();

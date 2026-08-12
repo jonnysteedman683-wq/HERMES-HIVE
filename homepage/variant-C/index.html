@@ -1,0 +1,698 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="description" content="HERMES-HIVE — an autonomous multi-repo AI swarm. 4 repositories, 9 agents per cycle, 90-minute heartbeat. Tactical schematic display.">
+<title>HERMES-HIVE · Autonomous Multi-Repo AI Swarm</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Cpolygon points='16,3 27.7,9.5 27.7,22.5 16,29 4.3,22.5 4.3,9.5' fill='none' stroke='%232ef2b0' stroke-width='2'/%3E%3Ccircle cx='16' cy='16' r='4' fill='%23b6ffe4'/%3E%3C/svg%3E">
+<style>
+:root{
+  --bg:#03090c;
+  --ink:#cfe9de;
+  --ink-dim:#5f9c8c;
+  --ink-faint:#2f5f52;
+  --phosphor:#2ef2b0;
+  --phosphor-bright:#b6ffe4;
+  --teal:#2ad4c8;
+  --teal-dim:#176b66;
+  --line:rgba(46,242,176,0.28);
+  --mono:ui-monospace,"Cascadia Mono","JetBrains Mono",Consolas,"Liberation Mono",monospace;
+  --sans:-apple-system,BlinkMacSystemFont,"Segoe UI","Helvetica Neue",Arial,sans-serif;
+}
+*{margin:0;padding:0;box-sizing:border-box}
+html,body{height:100%}
+body{
+  background:var(--bg);
+  color:var(--ink);
+  font-family:var(--sans);
+  overflow-x:hidden;
+  min-height:100vh;
+}
+
+/* ---------- stage ---------- */
+.stage{position:fixed;inset:0;z-index:1;overflow:hidden}
+#hive{position:absolute;inset:0;display:block}
+
+/* backdrop grid — faint schematic paper */
+.stage::before{
+  content:"";position:absolute;inset:0;pointer-events:none;
+  background-image:
+    linear-gradient(rgba(46,242,176,0.045) 1px,transparent 1px),
+    linear-gradient(90deg,rgba(46,242,176,0.045) 1px,transparent 1px);
+  background-size:52px 52px;
+  -webkit-mask-image:radial-gradient(ellipse 75% 70% at 50% 52%,#000 30%,transparent 75%);
+          mask-image:radial-gradient(ellipse 75% 70% at 50% 52%,#000 30%,transparent 75%);
+}
+/* vignette */
+.stage::after{
+  content:"";position:absolute;inset:0;pointer-events:none;
+  background:radial-gradient(ellipse at 50% 46%,transparent 48%,rgba(1,5,7,0.72) 100%);
+}
+
+/* ---------- CRT / HUD overlays ---------- */
+.scanlines{
+  position:fixed;inset:0;z-index:4;pointer-events:none;
+  background:repeating-linear-gradient(0deg,
+    rgba(0,0,0,0.16) 0 1px,transparent 1px 3px);
+  mix-blend-mode:multiply;opacity:0.7;
+}
+.sweep{
+  position:fixed;left:0;right:0;height:14vh;z-index:4;pointer-events:none;
+  background:linear-gradient(180deg,transparent,rgba(46,242,176,0.045) 45%,rgba(46,242,176,0.10) 50%,rgba(46,242,176,0.045) 55%,transparent);
+  animation:sweep 8s linear infinite;opacity:0.8;
+}
+@keyframes sweep{0%{top:-16vh}100%{top:110vh}}
+
+/* corner brackets */
+.corner{position:fixed;width:26px;height:26px;z-index:5;pointer-events:none;opacity:0.75}
+.corner.tl{top:14px;left:14px;border-top:1px solid var(--line);border-left:1px solid var(--line)}
+.corner.tr{top:14px;right:14px;border-top:1px solid var(--line);border-right:1px solid var(--line)}
+.corner.bl{bottom:14px;left:14px;border-bottom:1px solid var(--line);border-left:1px solid var(--line)}
+.corner.br{bottom:14px;right:14px;border-bottom:1px solid var(--line);border-right:1px solid var(--line)}
+
+/* ---------- telemetry modules ---------- */
+.tele{
+  position:fixed;z-index:5;font-family:var(--mono);font-size:10px;
+  letter-spacing:0.14em;color:var(--ink-dim);line-height:1.7;
+  text-transform:uppercase;pointer-events:none;
+}
+.tele .k{color:var(--ink-faint)}
+.tele .v{color:var(--phosphor-bright)}
+.tele .tag{color:var(--ink-faint);margin-right:6px}
+.tele-top-left{top:18px;left:56px}
+.tele-top-right{top:18px;right:56px;text-align:right}
+.tele b{font-weight:400;color:var(--phosphor)}
+.tele .blink{animation:blink 2.4s steps(1) infinite;color:var(--phosphor)}
+@keyframes blink{0%,60%{opacity:1}61%,100%{opacity:0.25}}
+
+/* ---------- hero content ---------- */
+.overlay{
+  position:relative;z-index:6;
+  min-height:100vh;
+  display:flex;flex-direction:column;align-items:center;justify-content:space-between;
+  padding:88px 24px 96px;
+  text-align:center;
+  pointer-events:none;
+}
+.overlay > *{pointer-events:auto}
+
+.hero-top{display:flex;flex-direction:column;align-items:center;gap:14px}
+.eyebrow{
+  font-family:var(--mono);font-size:10px;letter-spacing:0.42em;color:var(--ink-dim);
+  text-transform:uppercase;display:flex;align-items:center;gap:10px;
+}
+.eyebrow::before,.eyebrow::after{content:"";width:26px;height:1px;background:var(--line)}
+
+.hero-title{
+  font-weight:100;font-size:clamp(2.4rem,6.5vw,5.2rem);
+  letter-spacing:0.34em;text-indent:0.34em;
+  color:var(--ink);text-shadow:0 0 22px rgba(46,242,176,0.35),0 0 60px rgba(46,242,176,0.15);
+  white-space:nowrap;
+}
+.hero-tagline{
+  font-weight:200;font-size:clamp(0.85rem,1.6vw,1.05rem);
+  letter-spacing:0.30em;text-indent:0.30em;color:var(--ink-dim);text-transform:uppercase;
+}
+.hero-rule{width:min(340px,60vw);height:1px;background:linear-gradient(90deg,transparent,var(--line),transparent)}
+
+.cta{
+  margin-top:6px;
+  font-family:var(--mono);font-size:12px;letter-spacing:0.32em;text-transform:uppercase;
+  color:var(--phosphor-bright);
+  background:rgba(8,26,22,0.45);
+  border:1px solid var(--line);
+  padding:15px 46px;cursor:pointer;
+  transition:box-shadow .35s ease,background .35s ease,color .35s ease,border-color .35s ease;
+  text-shadow:0 0 8px rgba(46,242,176,0.6);
+  position:relative;overflow:hidden;
+}
+.cta::after{
+  content:"";position:absolute;top:0;left:-120%;width:60%;height:100%;
+  background:linear-gradient(105deg,transparent,rgba(182,255,228,0.18),transparent);
+  transition:left .6s ease;
+}
+.cta:hover,.cta:focus-visible{
+  background:rgba(46,242,176,0.10);
+  border-color:rgba(46,242,176,0.65);
+  box-shadow:0 0 18px rgba(46,242,176,0.45),0 0 60px rgba(46,242,176,0.18),inset 0 0 18px rgba(46,242,176,0.12);
+  color:#eafff5;
+}
+.cta:hover::after{left:140%}
+.cta:active{transform:scale(0.985)}
+.cta:focus-visible{outline:2px solid rgba(46,242,176,0.5);outline-offset:4px}
+
+/* ---------- bottom status strip ---------- */
+.status{
+  display:flex;align-items:center;gap:26px;flex-wrap:wrap;justify-content:center;
+  font-family:var(--mono);font-size:10px;letter-spacing:0.22em;color:var(--ink-dim);
+  text-transform:uppercase;
+}
+.status .sep{color:var(--ink-faint)}
+.status .val{color:var(--phosphor-bright)}
+.status .live{
+  display:inline-flex;align-items:center;gap:8px;color:var(--phosphor);
+}
+.live-dot{width:7px;height:7px;border-radius:50%;background:var(--phosphor);
+  box-shadow:0 0 10px var(--phosphor);animation:blink 1.8s steps(1) infinite}
+.status.flash .live-dot{animation:blink .3s steps(1) infinite}
+
+/* glitch flicker for telemetry readouts */
+.glitch{animation:glitch .28s steps(2) infinite}
+@keyframes glitch{
+  0%{transform:translate(0,0);text-shadow:0 0 8px var(--phosphor)}
+  25%{transform:translate(-1.5px,0.5px);text-shadow:2px 0 8px var(--teal),-2px 0 8px var(--phosphor)}
+  50%{transform:translate(1px,-0.5px);text-shadow:-2px 0 8px var(--teal),2px 0 8px var(--phosphor)}
+  75%{transform:translate(-0.5px,0);text-shadow:1px 0 8px var(--phosphor)}
+  100%{transform:translate(0,0);text-shadow:0 0 8px var(--phosphor)}
+}
+
+/* ---------- responsive ---------- */
+@media (max-width:640px){
+  .hero-title{white-space:normal;letter-spacing:0.22em;text-indent:0.22em}
+  .tele-top-right{display:none}
+  .tele-top-left{left:46px}
+  .status{gap:14px;font-size:9px}
+  .overlay{padding:84px 16px 84px}
+}
+@media (prefers-reduced-motion:reduce){
+  .sweep{animation:none}
+  .live-dot{animation:none}
+  .cta::after{display:none}
+}
+</style>
+</head>
+<body>
+
+<div class="stage" aria-hidden="true">
+  <canvas id="hive"></canvas>
+</div>
+<div class="scanlines" aria-hidden="true"></div>
+<div class="sweep" aria-hidden="true"></div>
+
+<div class="corner tl" aria-hidden="true"></div>
+<div class="corner tr" aria-hidden="true"></div>
+<div class="corner bl" aria-hidden="true"></div>
+<div class="corner br" aria-hidden="true"></div>
+
+<!-- top-left telemetry -->
+<div class="tele tele-top-left" aria-hidden="true">
+  <div><span class="tag">MOD</span><b>HIVE-OS</b> <span class="v">v4.2.7</span></div>
+  <div><span class="tag">CYC</span><span class="v" id="readCYC">CYC-0000</span></div>
+  <div><span class="tag">T+</span><span class="v" id="readT">00:00.0</span></div>
+  <div><span class="tag">HB</span><span class="v">90-MIN</span> <span class="blink">◈</span></div>
+</div>
+
+<!-- top-right telemetry -->
+<div class="tele tele-top-right" aria-hidden="true">
+  <div><span class="tag">UTC</span><span class="v" id="readClock">00:00:00</span></div>
+  <div><span class="tag">FPS</span><span class="v" id="readFPS">60</span></div>
+  <div><span class="tag">RES</span><span class="v" id="readRES">—</span></div>
+  <div><span class="tag">LINK</span><span class="blink">STABLE</span></div>
+</div>
+
+<main class="overlay">
+  <div class="hero-top">
+    <div class="eyebrow">Swarm tactical display · sector 07</div>
+    <h1 class="hero-title">HERMES-HIVE</h1>
+    <p class="hero-tagline">Autonomous multi-repo AI swarm</p>
+    <div class="hero-rule"></div>
+  </div>
+
+  <button class="cta" id="cta" type="button">Enter the Hive</button>
+
+  <footer class="status" id="status">
+    <span class="live"><span class="live-dot"></span>LIVE</span>
+    <span class="sep">▸</span>
+    <span><span class="val">4</span> REPOS</span>
+    <span class="sep">▸</span>
+    <span><span class="val">9</span> AGENTS PER CYCLE</span>
+    <span class="sep">▸</span>
+    <span><span class="val">90</span>-MIN HEARTBEAT</span>
+  </footer>
+</main>
+
+<script>
+(() => {
+'use strict';
+
+/* ================= state ================= */
+const canvas = document.getElementById('hive');
+const ctx = canvas.getContext('2d');
+const DPR = Math.min(window.devicePixelRatio || 1, 2);
+const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+const SPEED = reduceMotion ? 0.15 : 1;      // rotation multiplier (a11y: slow, still spinning)
+
+let W = 0, H = 0, CX = 0, CY = 0;
+
+/* topology — mirrors the real swarm: 4 repos at core, 9 agents on outer ring */
+const REPOS = [
+  { id: 'HIVE', name: 'HERMES-HIVE' },
+  { id: 'GTD',  name: 'GTDOWN' },
+  { id: 'OBS',  name: 'GTDOWN-OBSIDIAN' },
+  { id: 'SNT',  name: 'SENTINEL-MAIN' },
+];
+const AGENTS = Array.from({ length: 9 }, (_, i) => ({
+  id: 'AG-' + String(i + 1).padStart(2, '0'),
+  role: i < 6 ? 'BLD' : 'REV',              // 6 build agents + 3 review agents
+}));
+
+/* per-cell flicker timers (data-readout flickers) */
+const cells = REPOS.map(() => ({ flickerUntil: 0 }))
+                   .concat(AGENTS.map(() => ({ flickerUntil: 0 })));
+
+/* mission time */
+const t0 = performance.now() / 1000;
+let elapsed = 0;
+let cyc = 0;                                 // 90-second heartbeat intervals elapsed
+let pulseUntil = 0;                          // scan-pulse trigger (CTA)
+let lastDom = 0;
+
+/* fps */
+let fps = 60, fpsAcc = 0, fpsN = 0, fpsT = 0;
+
+/* twinkling stars */
+let stars = [];
+
+/* drift packets between cells */
+const PACKETS = [0, 1, 2, 3].map((i) => ({
+  phase: i / 4,
+  trail: [],
+}));
+
+/* cached glow sprites (fast, no per-frame gradient allocation) */
+function makeSprite(stops) {
+  const s = document.createElement('canvas');
+  s.width = s.height = 128;
+  const g = s.getContext('2d');
+  const grad = g.createRadialGradient(64, 64, 0, 64, 64, 64);
+  stops.forEach(([o, c]) => grad.addColorStop(o, c));
+  g.fillStyle = grad;
+  g.fillRect(0, 0, 128, 128);
+  return s;
+}
+const sprEmerald = makeSprite([[0, 'rgba(140,255,214,0.85)'], [0.35, 'rgba(46,242,176,0.32)'], [1, 'rgba(46,242,176,0)']]);
+const sprCore    = makeSprite([[0, 'rgba(255,255,255,0.95)'], [0.3, 'rgba(214,255,240,0.5)'],  [1, 'rgba(214,255,240,0)']]);
+
+function glow(img, x, y, size, alpha) {
+  ctx.globalCompositeOperation = 'lighter';
+  ctx.globalAlpha = alpha;
+  ctx.drawImage(img, x - size / 2, y - size / 2, size, size);
+  ctx.globalAlpha = 1;
+  ctx.globalCompositeOperation = 'source-over';
+}
+
+/* ================= geometry ================= */
+function hexPts(cx, cy, r, rot) {
+  const pts = [];
+  for (let k = 0; k < 6; k++) {
+    const a = rot + k * Math.PI / 3;
+    pts.push([cx + r * Math.cos(a), cy + r * Math.sin(a)]);
+  }
+  return pts;
+}
+function traceHex(pts) {
+  ctx.beginPath();
+  ctx.moveTo(pts[0][0], pts[0][1]);
+  for (let i = 1; i < 6; i++) ctx.lineTo(pts[i][0], pts[i][1]);
+  ctx.closePath();
+}
+/* HUD tick marks on every edge midpoint */
+function edgeTicks(pts, len, alpha) {
+  ctx.strokeStyle = 'rgba(46,242,176,' + alpha + ')';
+  ctx.lineWidth = 1;
+  for (let i = 0; i < 6; i++) {
+    const p = pts[i], q = pts[(i + 1) % 6];
+    const mx = (p[0] + q[0]) / 2, my = (p[1] + q[1]) / 2;
+    const dx = q[0] - p[0], dy = q[1] - p[1];
+    const d = Math.hypot(dx, dy) || 1;
+    const nx = -dy / d, ny = dx / d;         // perpendicular
+    ctx.beginPath();
+    ctx.moveTo(mx - nx * len / 2, my - ny * len / 2);
+    ctx.lineTo(mx + nx * len / 2, my + ny * len / 2);
+    ctx.stroke();
+  }
+}
+function hexFrame(cx, cy, r, rot, alpha, tick) {
+  const pts = hexPts(cx, cy, r, rot);
+  traceHex(pts);
+  ctx.strokeStyle = 'rgba(46,242,176,' + alpha + ')';
+  ctx.lineWidth = 1;
+  ctx.stroke();
+  if (tick) edgeTicks(pts, 6, alpha * 1.6);
+  ctx.fillStyle = 'rgba(46,242,176,' + (alpha * 1.4) + ')';
+  for (const [x, y] of pts) {               // vertex nodes
+    ctx.fillRect(x - 1.2, y - 1.2, 2.4, 2.4);
+  }
+}
+
+/* label with optional flicker: alpha jitter + hex-digit scramble */
+function scramble(str) {
+  const hex = '0123456789ABCDEF';
+  return str.split('').map((c) =>
+    Math.random() < 0.4 ? hex[(Math.random() * 16) | 0] : c
+  ).join('');
+}
+function microLabel(text, sub, cx, cy, fs, color, dim, flick) {
+  let alpha = 1;
+  let label = text, sublabel = sub;
+  if (flick) {
+    alpha = 0.45 + 0.5 * Math.random();
+    if (Math.random() < 0.55) label = scramble(text);
+    if (Math.random() < 0.4) sublabel = scramble(sub);
+  }
+  ctx.globalAlpha = alpha;
+  ctx.font = fs + 'px ' + '"Cascadia Mono",Consolas,ui-monospace,monospace';
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'middle';
+  ctx.fillStyle = color;
+  ctx.fillText(label, cx, cy - fs * 0.18);
+  ctx.fillStyle = dim;
+  ctx.font = Math.max(6, fs * 0.72) + 'px ' + '"Cascadia Mono",Consolas,ui-monospace,monospace';
+  ctx.fillText(sublabel, cx, cy + fs * 0.78);
+  ctx.globalAlpha = 1;
+}
+
+/* ================= rings ================= */
+function drawRepoRing(t) {
+  const n = REPOS.length;
+  const R = Math.min(W, H) * 0.185;
+  const rc = Math.min(W, H) * 0.058;
+  const rot = t * 0.028 * SPEED;
+  for (let i = 0; i < n; i++) {
+    const a = rot + i * Math.PI * 2 / n;
+    const cx = CX + R * Math.cos(a);
+    const cy = CY + R * Math.sin(a);
+    const flick = t < cells[i].flickerUntil;
+
+    glow(sprEmerald, cx, cy, rc * 3.1, 0.22);
+    const pts = hexPts(cx, cy, rc, rot * 0.6 + i * Math.PI / 3);
+    traceHex(pts);
+    ctx.fillStyle = 'rgba(10,32,28,0.55)';
+    ctx.fill();
+    ctx.strokeStyle = flick ? 'rgba(42,212,200,0.95)' : 'rgba(46,242,176,0.55)';
+    ctx.lineWidth = 1.1;
+    ctx.stroke();
+    edgeTicks(pts, 5, 0.35);
+
+    /* status dot */
+    ctx.fillStyle = flick ? 'rgba(255,255,255,0.9)' : 'rgba(182,255,228,0.9)';
+    ctx.fillRect(cx - 1.5, cy - rc * 0.92 - 1.5, 3, 3);
+
+    /* upright label */
+    ctx.save();
+    ctx.translate(cx, cy);
+    ctx.rotate(-(a));
+    microLabel(REPOS[i].name, 'CYC-' + String((cyc + i * 7) % 10000).padStart(4, '0'),
+              0, 0, Math.min(11, Math.max(7.5, Math.min(W, H) * 0.011)),
+              'rgba(214,255,240,0.95)', 'rgba(111,176,154,0.9)', flick);
+    ctx.restore();
+  }
+}
+
+function drawAgentRing(t) {
+  const n = AGENTS.length;
+  const R = Math.min(W, H) * 0.30;
+  const rc = Math.min(W, H) * 0.040;
+  const rot = -t * 0.021 * SPEED;
+  for (let i = 0; i < n; i++) {
+    const a = rot + i * Math.PI * 2 / n;
+    const cx = CX + R * Math.cos(a);
+    const cy = CY + R * Math.sin(a);
+    const flick = t < cells[REPOS.length + i].flickerUntil;
+    const isRev = AGENTS[i].role === 'REV';
+    const col = isRev ? 'rgba(42,212,200,0.55)' : 'rgba(46,242,176,0.5)';
+
+    glow(sprEmerald, cx, cy, rc * 3.0, 0.16);
+    const pts = hexPts(cx, cy, rc, rot * 0.7 + i * Math.PI / 3);
+    traceHex(pts);
+    ctx.fillStyle = 'rgba(7,26,23,0.5)';
+    ctx.fill();
+    ctx.strokeStyle = flick ? 'rgba(255,255,255,0.9)' : col;
+    ctx.lineWidth = 1;
+    ctx.stroke();
+
+    ctx.save();
+    ctx.translate(cx, cy);
+    ctx.rotate(-(a));
+    const fs = Math.min(9.5, Math.max(6.5, Math.min(W, H) * 0.009));
+    microLabel(AGENTS[i].id, AGENTS[i].role + ' ' + String((elapsed / 1.7 + i * 13) % 100 | 0).padStart(2, '0'),
+              0, 0, fs, 'rgba(190,255,232,0.95)', isRev ? 'rgba(80,200,190,0.85)' : 'rgba(111,176,154,0.85)', flick);
+    ctx.restore();
+  }
+}
+
+/* ================= reactor core orb ================= */
+function drawOrb(t) {
+  const r = Math.min(W, H) * 0.048;
+  const breath = 1 + 0.07 * Math.sin(t * 1.35);      // breathing pulse
+  const rr = r * breath;
+
+  /* halo + light cast onto nearby hex edges */
+  glow(sprEmerald, CX, CY, r * 7.5, 0.30);
+  glow(sprEmerald, CX, CY, r * 4.2, 0.30 * (0.8 + 0.2 * Math.sin(t * 1.35)));
+  glow(sprCore, CX, CY, rr * 2.6, 0.85);
+
+  /* containment ring with tick marks */
+  ctx.strokeStyle = 'rgba(46,242,176,0.22)';
+  ctx.lineWidth = 1;
+  ctx.beginPath();
+  ctx.arc(CX, CY, r * 1.62, 0, Math.PI * 2);
+  ctx.stroke();
+  const c = Math.cos, s = Math.sin;
+  for (let k = 0; k < 24; k++) {
+    const a = k * Math.PI / 12 - t * 0.09 * SPEED;
+    const r1 = r * 1.54, r2 = r * (k % 2 ? 1.62 : 1.70);
+    ctx.beginPath();
+    ctx.moveTo(CX + r1 * c(a), CY + r1 * s(a));
+    ctx.lineTo(CX + r2 * c(a), CY + r2 * s(a));
+    ctx.stroke();
+  }
+
+  /* body — white-hot core to emerald */
+  const g = ctx.createRadialGradient(CX - rr * 0.35, CY - rr * 0.4, rr * 0.1, CX, CY, rr);
+  g.addColorStop(0, 'rgba(255,255,255,1)');
+  g.addColorStop(0.28, 'rgba(214,255,240,0.95)');
+  g.addColorStop(0.62, 'rgba(46,242,176,0.75)');
+  g.addColorStop(1, 'rgba(23,107,102,0.55)');
+  ctx.fillStyle = g;
+  ctx.beginPath();
+  ctx.arc(CX, CY, rr, 0, Math.PI * 2);
+  ctx.fill();
+
+  /* reactor core hexagon — rotating inside the orb */
+  const hex = hexPts(CX, CY, rr * 0.55, t * 0.35 * SPEED);
+  traceHex(hex);
+  ctx.strokeStyle = 'rgba(255,255,255,0.75)';
+  ctx.lineWidth = 1.2;
+  ctx.stroke();
+  edgeTicks(hex, 3.5, 0.6);
+  /* inner counter-rotating ring */
+  ctx.strokeStyle = 'rgba(255,255,255,0.35)';
+  ctx.beginPath();
+  ctx.arc(CX, CY, rr * 0.34, t * -0.6 * SPEED, t * -0.6 * SPEED + Math.PI * 1.4);
+  ctx.stroke();
+
+  /* specular highlight */
+  glow(sprCore, CX - rr * 0.38, CY - rr * 0.42, rr * 0.9, 0.9);
+
+  /* crosshair marks */
+  ctx.strokeStyle = 'rgba(46,242,176,0.4)';
+  ctx.lineWidth = 1;
+  for (const [dx, dy] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) {
+    ctx.beginPath();
+    ctx.moveTo(CX + dx * rr * 1.05, CY + dy * rr * 1.05);
+    ctx.lineTo(CX + dx * rr * 1.22, CY + dy * rr * 1.22);
+    ctx.stroke();
+  }
+}
+
+/* ================= packets + scan pulse ================= */
+function drawPackets(t, dt) {
+  const R0 = Math.min(W, H) * 0.185;
+  const R1 = Math.min(W, H) * 0.30;
+  for (const p of PACKETS) {
+    const a = t * (0.11 + p.phase * 0.05) * SPEED + p.phase * Math.PI * 2;
+    const wob = Math.sin(t * 0.5 + p.phase * Math.PI * 2) * 0.35;
+    const r = R0 + (R1 - R0) * (0.5 + wob * 0.42);
+    const x = CX + r * Math.cos(a);
+    const y = CY + r * Math.sin(a);
+    p.trail.push([x, y]);
+    if (p.trail.length > 9) p.trail.shift();
+    for (let i = 0; i < p.trail.length - 1; i++) {
+      const [tx, ty] = p.trail[i];
+      const f = i / p.trail.length;
+      ctx.globalCompositeOperation = 'lighter';
+      ctx.globalAlpha = f * 0.22;
+      ctx.fillStyle = 'rgba(46,242,176,1)';
+      ctx.beginPath();
+      ctx.arc(tx, ty, 1.1 + f * 1.4, 0, Math.PI * 2);
+      ctx.fill();
+    }
+    ctx.globalAlpha = 1;
+    ctx.globalCompositeOperation = 'source-over';
+    glow(sprEmerald, x, y, 16, 0.5);
+    glow(sprCore, x, y, 5, 0.8);
+  }
+}
+
+function drawScanPulse(t) {
+  const period = 9;                                  // one reactor heartbeat every 9s
+  const p = (t % period) / 1.3;
+  if (p >= 1) return;
+  const r = Math.min(W, H) * 0.04 + p * Math.min(W, H) * 0.42;
+  const alpha = (1 - p) * 0.5;
+  glow(sprEmerald, CX, CY, r * 2.6, alpha * 0.6);
+  const pts = hexPts(CX, CY, r, t * 0.2);
+  traceHex(pts);
+  ctx.strokeStyle = 'rgba(46,242,176,' + alpha + ')';
+  ctx.lineWidth = 1;
+  ctx.stroke();
+  edgeTicks(pts, 5, alpha);
+}
+
+/* ================= main loop ================= */
+function draw(t) {
+  /* backdrop nebula */
+  const g0 = ctx.createRadialGradient(CX, CY * 0.92, 10, CX, CY * 0.92, Math.min(W, H) * 0.62);
+  g0.addColorStop(0, 'rgba(10,44,42,0.34)');
+  g0.addColorStop(0.55, 'rgba(7,30,32,0.16)');
+  g0.addColorStop(1, 'rgba(3,9,12,0)');
+  ctx.fillStyle = g0;
+  ctx.fillRect(0, 0, W, H);
+
+  /* stars */
+  for (const st of stars) {
+    const tw = 0.06 + 0.2 * (0.5 + 0.5 * Math.sin(t * 0.8 + st.ph));
+    ctx.globalAlpha = tw;
+    ctx.fillStyle = st.b ? 'rgba(182,255,228,1)' : 'rgba(95,156,140,1)';
+    ctx.fillRect(st.x, st.y, st.s, st.s);
+  }
+  ctx.globalAlpha = 1;
+
+  hexFrame(CX, CY, Math.min(W, H) * 0.366, t * 0.05 * SPEED, 0.20, true);
+  hexFrame(CX, CY, Math.min(W, H) * 0.258, -t * 0.038 * SPEED, 0.13, true);
+  hexFrame(CX, CY, Math.min(W, H) * 0.133, t * 0.06 * SPEED, 0.16, false);
+
+  drawRepoRing(t);
+  drawAgentRing(t);
+  drawPackets(t);
+  drawOrb(t);
+
+  if (t < pulseUntil) drawScanPulseExtra();
+  drawScanPulse(t);
+}
+
+function drawScanPulseExtra() {
+  const p = 1 - Math.max(0, (pulseUntil - elapsed) / 0.9);
+  const r = Math.min(W, H) * 0.04 + p * Math.min(W, H) * 0.5;
+  const alpha = (1 - p) * 0.55;
+  glow(sprEmerald, CX, CY, r * 2.6, alpha * 0.7);
+  const pts = hexPts(CX, CY, r, elapsed * 0.3);
+  traceHex(pts);
+  ctx.strokeStyle = 'rgba(46,242,176,' + alpha + ')';
+  ctx.lineWidth = 1.2;
+  ctx.stroke();
+}
+
+function frame(now) {
+  const t = now / 1000 - t0;
+  const dt = Math.min(0.05, t - elapsed);
+  elapsed = t;
+
+  /* heartbeat counter: one tick per 90s of wall time */
+  const c = Math.floor(elapsed / 90);
+  if (c !== cyc) { cyc = c; document.getElementById('readCYC').textContent = 'CYC-' + String(c).padStart(4, '0'); }
+
+  /* occasional label flickers */
+  for (const cell of cells) {
+    if (t >= cell.flickerUntil && Math.random() < 0.0016) {
+      cell.flickerUntil = t + 0.1 + Math.random() * 0.18;
+    }
+  }
+
+  ctx.setTransform(DPR, 0, 0, DPR, 0, 0);
+  ctx.clearRect(0, 0, W, H);
+  draw(t);
+
+  /* fps + dom readouts (throttled) */
+  fpsAcc += 1 / Math.max(1e-4, dt);
+  fpsN++; fpsT += dt;
+  if (fpsT >= 0.5) {
+    fps = Math.round(fpsAcc / fpsN);
+    fpsAcc = fpsN = fpsT = 0;
+  }
+  if (now - lastDom > 250) {
+    lastDom = now;
+    document.getElementById('readFPS').textContent = String(fps);
+    document.getElementById('readT').textContent =
+      String(Math.floor(elapsed / 60)).padStart(2, '0') + ':' +
+      String(Math.floor(elapsed % 60)).padStart(2, '0') + '.' +
+      String(Math.floor(elapsed * 10) % 10);
+  }
+  requestAnimationFrame(frame);
+}
+
+/* ================= dom extras ================= */
+function tickClock() {
+  const d = new Date();
+  const p = (n) => String(n).padStart(2, '0');
+  document.getElementById('readClock').textContent =
+    p(d.getUTCHours()) + ':' + p(d.getUTCMinutes()) + ':' + p(d.getUTCSeconds());
+}
+setInterval(tickClock, 500);
+tickClock();
+
+/* occasional telemetry glitch */
+setInterval(() => {
+  const el = document.getElementById('readCYC');
+  el.classList.remove('glitch');
+  void el.offsetWidth;
+  el.classList.add('glitch');
+  setTimeout(() => el.classList.remove('glitch'), 320);
+}, 4200 + Math.random() * 4200);
+
+/* CTA */
+const cta = document.getElementById('cta');
+cta.addEventListener('click', () => {
+  pulseUntil = elapsed + 0.9;
+  const status = document.getElementById('status');
+  status.classList.add('flash');
+  const txt = cta.textContent;
+  cta.textContent = 'LINKING…';
+  setTimeout(() => { cta.textContent = 'LINKED'; }, 600);
+  setTimeout(() => { cta.textContent = txt; status.classList.remove('flash'); }, 1800);
+});
+
+/* resize */
+function resize() {
+  W = window.innerWidth;
+  H = window.innerHeight;
+  canvas.width = Math.round(W * DPR);
+  canvas.height = Math.round(H * DPR);
+  canvas.style.width = W + 'px';
+  canvas.style.height = H + 'px';
+  CX = W / 2;
+  CY = H * (W < 640 ? 0.56 : 0.60);
+  document.getElementById('readRES').textContent = W + '×' + H;
+  /* starfield */
+  stars = [];
+  const n = W < 640 ? 34 : 64;
+  for (let i = 0; i < n; i++) {
+    stars.push({
+      x: Math.random() * W,
+      y: Math.random() * H,
+      s: Math.random() < 0.25 ? 1.6 : 1,
+      ph: Math.random() * Math.PI * 2,
+      b: Math.random() < 0.4,
+    });
+  }
+}
+window.addEventListener('resize', resize);
+resize();
+
+requestAnimationFrame(frame);
+})();
+</script>
+</body>
+</html>

@@ -1,0 +1,63 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>HERMES-HIVE — Design Selection</title>
+<style>
+  :root { --bg:#05070c; --ink:#e8f0f2; --cyan:#39d7e6; --gold:#e8b64c; }
+  * { margin:0; padding:0; box-sizing:border-box; }
+  body { background:var(--bg); color:var(--ink); font-family:'Segoe UI', system-ui, sans-serif; min-height:100vh; }
+  header { text-align:center; padding:56px 20px 12px; }
+  h1 { font-weight:200; letter-spacing:.45em; font-size:clamp(28px,5vw,52px); text-shadow:0 0 24px rgba(57,215,230,.35); }
+  .sub { color:#8fa3ad; letter-spacing:.25em; font-size:13px; margin-top:10px; text-transform:uppercase; }
+  .grid { display:grid; grid-template-columns:repeat(auto-fit,minmax(320px,1fr)); gap:26px; padding:40px clamp(16px,4vw,60px) 70px; max-width:1500px; margin:0 auto; }
+  .card { background:#0a0f16; border:1px solid #1b2733; border-radius:14px; overflow:hidden; transition:transform .35s ease, box-shadow .35s ease, border-color .35s ease; display:flex; flex-direction:column; }
+  .card:hover { transform:translateY(-6px); border-color:var(--cyan); box-shadow:0 18px 50px -18px rgba(57,215,230,.35); }
+  .card img { width:100%; display:block; aspect-ratio:14/9; object-fit:cover; object-position:top; }
+  .meta { padding:20px 22px 24px; }
+  .meta h2 { font-weight:300; letter-spacing:.18em; font-size:17px; }
+  .meta .model { color:var(--gold); font-size:12px; letter-spacing:.12em; margin:6px 0 10px; text-transform:uppercase; }
+  .meta p { color:#93a5b0; font-size:13.5px; line-height:1.55; }
+  a.btn { display:inline-block; margin-top:16px; padding:10px 26px; border:1px solid var(--gold); color:var(--gold); text-decoration:none; letter-spacing:.22em; font-size:12px; text-transform:uppercase; border-radius:4px; transition:all .3s; }
+  a.btn:hover { background:rgba(232,182,76,.12); box-shadow:0 0 22px rgba(232,182,76,.35); }
+  footer { text-align:center; color:#5c6d78; font-size:12px; letter-spacing:.2em; padding-bottom:40px; }
+</style>
+</head>
+<body>
+<header>
+  <h1>HERMES-HIVE</h1>
+  <div class="sub">design team — three concepts · pick your hive</div>
+</header>
+<div class="grid">
+  <div class="card">
+    <img src="shot-A.png" alt="Variant A preview">
+    <div class="meta">
+      <h2>A — MINIMAL PRECISION</h2>
+      <div class="model">claude-sonnet-4.5</div>
+      <p>Hairline luminous hexagons on deep navy. A cyan-gold orb at the core. Calm, expensive, architectural — the hive as a precision instrument.</p>
+      <a class="btn" href="variant-A/index.html">Enter A</a>
+    </div>
+  </div>
+  <div class="card">
+    <img src="shot-B.png" alt="Variant B preview">
+    <div class="meta">
+      <h2>B — ORGANIC ENERGY</h2>
+      <div class="model">deepseek-chat</div>
+      <p>An amber heart-orb breathing inside a violet lattice. Four repo cells, nine numbered agent nodes, firefly particles carrying work. The hive as an organism.</p>
+      <a class="btn" href="variant-B/index.html">Enter B</a>
+    </div>
+  </div>
+  <div class="card">
+    <img src="shot-C.png" alt="Variant C preview">
+    <div class="meta">
+      <h2>C — TACTICAL HUD</h2>
+      <div class="model">nemotron-3-ultra</div>
+      <p>Emerald phosphor mission control. Scanlines, live readouts, agent IDs ticking on rotating hex cells, reactor-core orb. The hive as a live tactical display.</p>
+      <a class="btn" href="variant-C/index.html">Enter C</a>
+    </div>
+  </div>
+</div>
+<footer>HERMES-HIVE · autonomous multi-repo ai swarm · 90-min heartbeat</footer>
+</body>
+</html>
