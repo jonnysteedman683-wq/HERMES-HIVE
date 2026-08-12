@@ -24,7 +24,7 @@ export class AgentReputationEngine {
       verificationScore: 0.95,
       failureRate: 0.0,
       recoveryRate: 1.0,
-      averageLatency: 1200,
+      averageLatencyMs: 1200,
       averageCost: 500,
       toolReliability: 0.98,
       specializationScores: {
@@ -83,7 +83,7 @@ export class AgentReputationEngine {
 
     // Update average latency & cost
     const totalLatency = agentHistory.reduce((acc, h) => acc + h.latencyMs, 0);
-    rep.averageLatency = Math.round(totalLatency / total);
+    rep.averageLatencyMs = Math.round(totalLatency / total);
 
     const totalCost = agentHistory.reduce((acc, h) => acc + h.costTokens, 0);
     rep.averageCost = Math.round(totalCost / total);
