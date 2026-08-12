@@ -1,6 +1,6 @@
 import type { Plugin, Connect } from 'vite';
 import { requestLogger } from './middleware/requestLogger';
-import { normalizeError } from '../shared/errors';
+import { normalizeError, ValidationError } from '../shared/errors';
 import { agentRegistry } from './registry/agentRegistry';
 import { missionEngine } from './missions/missionEngine';
 import { hermesEngine } from './hermes/hermesEngine';
@@ -250,6 +250,26 @@ export function apiMiddleware(): Plugin {
           res.end(JSON.stringify(data));
         };
 
+        // Collect the names of required object fields that are missing or empty.
+        const missingFields = (body: Record<string, unknown>, fields: string[]): string[] => {
+          return fields.filter((f) => {
+            const v = body[f];
+            return v === undefined || v === null || v === '' || (Array.isArray(v) && v.length === 0);
+          });
+        };
+
+        // Throw a ValidationError if any required field is absent so the
+        // top-level handler returns a structured 400 with `missingFields`.
+        const requireFields = (body: Record<string, unknown>, fields: string[]): void => {
+          const missing = missingFields(body, fields);
+          if (missing.length > 0) {
+            throw new ValidationError(
+              `Missing required fields: ${missing.join(', ')}`,
+              missing,
+            );
+          }
+        };
+
         try {
           // 1. Health check
           if (url === '/api/health') {
@@ -355,10 +375,11 @@ export function apiMiddleware(): Plugin {
 
           if (url === '/api/agents' && method === 'POST') {
             const body = await getBody();
+            requireFields(body, ['name', 'role', 'capabilities']);
             const newAgent = agentRegistry.createAgent({
-              name: body.name || `Agent-${body.role || 'Worker'}`,
-              role: body.role || 'Researcher',
-              capabilities: body.capabilities || ['analysis'],
+              name: body.name,
+              role: body.role,
+              capabilities: body.capabilities,
               clusterId: body.clusterId || 'Cluster A',
             });
             return jsonResponse({ agent: newAgent });
@@ -419,9 +440,7 @@ export function apiMiddleware(): Plugin {
 
           if (url === '/api/missions' && method === 'POST') {
             const body = await getBody();
-            if (!body.objective || !Array.isArray(body.tasks)) {
-              return jsonResponse({ error: 'Invalid mission payload' }, 400);
-            }
+            requireFields(body, ['objective', 'tasks']);
             const mission = missionEngine.createMission({
               objective: body.objective,
               priority: body.priority || 3,
