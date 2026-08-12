@@ -8,7 +8,7 @@
     "build": "vite build",
     "preview": "vite preview",
     "start": "vite preview",
-    "clean": "rm -rf dist .hive",
+    "clean": "rm -rf dist",
     "lint": "tsc --noEmit",
     "lint:fix": "tsc --noEmit",
     "test": "vitest run",
