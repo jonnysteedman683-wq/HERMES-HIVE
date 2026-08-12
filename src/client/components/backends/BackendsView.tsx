@@ -1,4 +1,5 @@
-import React, { useEffect, useState } from 'react';
+import React, { useState } from 'react';
+import { usePolling } from '../../hooks/usePolling';
 
 interface BackendHealth {
   status: string;
@@ -40,11 +41,7 @@ export const BackendsView: React.FC = () => {
     }
   };
 
-  useEffect(() => {
-    load();
-    const interval = setInterval(load, 5000);
-    return () => clearInterval(interval);
-  }, []);
+  usePolling(load, 5000);
 
   const statusColor = (status: string) => {
     if (status === 'ok') return 'bg-emerald-400';

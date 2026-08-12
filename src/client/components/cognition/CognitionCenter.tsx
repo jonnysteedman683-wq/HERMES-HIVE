@@ -1,4 +1,5 @@
-import React, { useEffect, useState } from 'react';
+import React, { useState } from 'react';
+import { usePolling } from '../../hooks/usePolling';
 import { Brain, Network, BookOpen, MessageSquareCode, Award, ArrowRight, Zap, CheckCircle } from 'lucide-react';
 import { DebateRecord, WorldEntity, WorldRelationship, SwarmLearningRecord } from '../../../shared/types';
 
@@ -27,11 +28,7 @@ export const CognitionCenter: React.FC = () => {
     }
   };
 
-  useEffect(() => {
-    fetchData();
-    const interval = setInterval(fetchData, 4000);
-    return () => clearInterval(interval);
-  }, []);
+  usePolling(fetchData, 4000);
 
   return (
     <div className="h-full flex flex-col gap-6 overflow-y-auto pr-2">

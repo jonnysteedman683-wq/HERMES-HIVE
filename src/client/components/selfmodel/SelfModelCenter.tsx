@@ -1,4 +1,6 @@
-import React, { useEffect, useState } from 'react';
+import React, { useState } from 'react';
+import { formatTime } from '../../utils/format';
+import { usePolling } from '../../hooks/usePolling';
 import {
   BrainCircuit,
   Cpu,
@@ -70,11 +72,7 @@ export const SelfModelCenter: React.FC = () => {
     }
   };
 
-  useEffect(() => {
-    fetchData();
-    const interval = setInterval(fetchData, 4000);
-    return () => clearInterval(interval);
-  }, []);
+  usePolling(fetchData, 4000);
 
   const handleRunCustomScenario = async () => {
     if (!newScenarioTitle.trim()) return;
@@ -310,7 +308,7 @@ export const SelfModelCenter: React.FC = () => {
                     </span>
                     <h4 className="text-xs font-bold text-slate-100">{s.title}</h4>
                   </div>
-                  <span className="text-[10px] font-mono text-slate-500">{new Date(s.simulatedAt).toLocaleTimeString()}</span>
+                  <span className="text-[10px] font-mono text-slate-500">{formatTime(s.simulatedAt)}</span>
                 </div>
 
                 <p className="text-[11px] text-slate-300 bg-slate-900 p-2.5 rounded border border-slate-800">

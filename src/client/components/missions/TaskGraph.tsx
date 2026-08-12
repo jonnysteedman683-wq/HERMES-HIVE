@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
+import { badgeFor, TASK_STATUS_BADGE } from '../../utils/badges';
 import { MissionTask } from '../../../shared/types';
-import { CheckCircle2, AlertTriangle, Clock, Activity, ShieldCheck, ChevronDown, ChevronRight, ArrowDown } from 'lucide-react';
+import { ShieldCheck, ChevronDown, ChevronRight, ArrowDown } from 'lucide-react';
 
 interface TaskGraphProps {
   tasks: MissionTask[];
@@ -8,21 +9,6 @@ interface TaskGraphProps {
 
 export const TaskGraph: React.FC<TaskGraphProps> = ({ tasks }) => {
   const [expandedTaskId, setExpandedTaskId] = useState<string | null>(null);
-
-  const getStatusBadge = (status: MissionTask['status']) => {
-    switch (status) {
-      case 'completed':
-        return { label: 'Completed', bg: 'bg-emerald-500/20 text-emerald-300 border-emerald-500/40', icon: CheckCircle2 };
-      case 'running':
-        return { label: 'Executing', bg: 'bg-cyan-500/20 text-cyan-300 border-cyan-500/40', icon: Activity };
-      case 'failed':
-        return { label: 'Failed', bg: 'bg-red-500/20 text-red-300 border-red-500/40', icon: AlertTriangle };
-      case 'pending':
-        return { label: 'Pending', bg: 'bg-slate-800 text-slate-400 border-slate-700', icon: Clock };
-      default:
-        return { label: status, bg: 'bg-slate-800 text-slate-400 border-slate-700', icon: Clock };
-    }
-  };
 
   return (
     <div className="space-y-4">
@@ -33,7 +19,7 @@ export const TaskGraph: React.FC<TaskGraphProps> = ({ tasks }) => {
 
       <div className="space-y-3">
         {tasks.map((task, idx) => {
-          const statusInfo = getStatusBadge(task.status);
+          const statusInfo = badgeFor(TASK_STATUS_BADGE, task.status);
           const StatusIcon = statusInfo.icon;
           const isExpanded = expandedTaskId === task.id;
 

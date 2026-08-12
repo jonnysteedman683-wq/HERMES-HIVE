@@ -1,4 +1,6 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
+import { formatTime } from '../../utils/format';
+import { usePolling } from '../../hooks/usePolling';
 import {
   Globe,
   ShieldCheck,
@@ -80,11 +82,7 @@ export const HermesWebConsole: React.FC = () => {
     }
   };
 
-  useEffect(() => {
-    fetchData();
-    const interval = setInterval(fetchData, 5000);
-    return () => clearInterval(interval);
-  }, []);
+  usePolling(fetchData, 5000);
 
   const handleSelectCapability = (cap: CapabilityDescriptor) => {
     setSelectedCap(cap);
@@ -646,7 +644,7 @@ export const HermesWebConsole: React.FC = () => {
 
                   <div className="flex items-center gap-4 text-right">
                     <div>
-                      <p className="text-[10px] text-slate-400">{new Date(log.timestamp).toLocaleTimeString()}</p>
+                      <p className="text-[10px] text-slate-400">{formatTime(log.timestamp)}</p>
                       <p className="text-[11px] text-emerald-400 font-bold">{log.durationMs}ms</p>
                     </div>
                     {getRiskBadge(log.riskLevel)}
@@ -681,7 +679,7 @@ export const HermesWebConsole: React.FC = () => {
                       <span className="text-slate-400 text-[11px]">Source: {evt.source}</span>
                     </div>
 
-                    <span className="text-[10px] text-slate-400">{new Date(evt.timestamp).toLocaleTimeString()}</span>
+                    <span className="text-[10px] text-slate-400">{formatTime(evt.timestamp)}</span>
                   </div>
 
                   <div className="text-slate-300 text-[11px] mt-1 bg-slate-950 p-2 rounded border border-slate-800/50">

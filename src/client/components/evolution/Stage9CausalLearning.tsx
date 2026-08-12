@@ -1,4 +1,7 @@
-import React, { useEffect, useState } from 'react';
+import React, { useState } from 'react';
+import { clsFor, CAPABILITY_STATUS_CLS } from '../../utils/badges';
+import { formatTime, formatDateTime } from '../../utils/format';
+import { usePolling } from '../../hooks/usePolling';
 import {
   Brain,
   TrendingUp,
@@ -79,11 +82,7 @@ export const Stage9CausalLearning: React.FC = () => {
     }
   };
 
-  useEffect(() => {
-    fetchData();
-    const interval = setInterval(fetchData, 5000);
-    return () => clearInterval(interval);
-  }, []);
+  usePolling(fetchData, 5000);
 
   const handleApplyDecay = async () => {
     try {
@@ -324,7 +323,7 @@ export const Stage9CausalLearning: React.FC = () => {
                     </span>
                   </div>
                   <div className="text-[11px] font-mono text-slate-400">
-                    {new Date(selectedPrediction.timestamp).toLocaleString()}
+                    {formatDateTime(selectedPrediction.timestamp)}
                   </div>
                 </div>
 
@@ -471,7 +470,7 @@ export const Stage9CausalLearning: React.FC = () => {
                   <div className="flex justify-between items-start">
                     <div>
                       <h4 className="text-sm font-bold text-slate-100">{p.provider}</h4>
-                      <span className="text-[10px] font-mono text-slate-500">Evaluated: {new Date(p.lastEvaluatedAt).toLocaleTimeString()}</span>
+                      <span className="text-[10px] font-mono text-slate-500">Evaluated: {formatTime(p.lastEvaluatedAt)}</span>
                     </div>
                     <div className={`px-2.5 py-1 text-xs font-mono font-bold rounded-lg ${
                       isBad ? 'bg-rose-500/10 text-rose-400 border border-rose-500/20' : 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20'
@@ -562,10 +561,7 @@ export const Stage9CausalLearning: React.FC = () => {
                     <div className="space-y-3">
                       <div className="flex justify-between items-center">
                         <span className={`px-2 py-0.5 text-[10px] font-mono font-bold rounded uppercase ${
-                          c.status === 'AVAILABLE' ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/30' :
-                          c.status === 'VALIDATED' ? 'bg-purple-500/20 text-purple-300 border border-purple-500/30' :
-                          c.status === 'SIMULATED' ? 'bg-cyan-500/20 text-cyan-300 border border-cyan-500/30' :
-                          'bg-amber-500/20 text-amber-300 border border-amber-500/30'
+clsFor(CAPABILITY_STATUS_CLS, c.status)
                         }`}>
                           {c.status}
                         </span>

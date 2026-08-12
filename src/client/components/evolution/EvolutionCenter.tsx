@@ -1,4 +1,7 @@
-import React, { useEffect, useState } from 'react';
+import React, { useState } from 'react';
+import { clsFor, EXPERIMENT_STATUS_CLS } from '../../utils/badges';
+import { formatTime } from '../../utils/format';
+import { usePolling } from '../../hooks/usePolling';
 import {
   Dna,
   FlaskConical,
@@ -68,11 +71,7 @@ export const EvolutionCenter: React.FC = () => {
     }
   };
 
-  useEffect(() => {
-    fetchData();
-    const interval = setInterval(fetchData, 4000);
-    return () => clearInterval(interval);
-  }, []);
+  usePolling(fetchData, 4000);
 
   const handleCreateHypothesis = async () => {
     if (!newHypStatement.trim()) return;
@@ -270,9 +269,7 @@ export const EvolutionCenter: React.FC = () => {
                     <div>
                       <div className="flex items-center gap-2">
                         <span className={`px-2.5 py-0.5 text-[10px] font-mono font-bold rounded uppercase ${
-                          exp.status === 'PROMOTED' ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/30' :
-                          exp.status === 'VERIFIED' ? 'bg-purple-500/20 text-purple-300 border border-purple-500/30' :
-                          'bg-amber-500/20 text-amber-300 border border-amber-500/30'
+clsFor(EXPERIMENT_STATUS_CLS, exp.status)
                         }`}>
                           {exp.status}
                         </span>
@@ -485,7 +482,7 @@ export const EvolutionCenter: React.FC = () => {
                     }`}>
                       {item.type}
                     </span>
-                    <span className="text-[10px] font-mono text-slate-500">{new Date(item.recordedAt).toLocaleTimeString()}</span>
+                    <span className="text-[10px] font-mono text-slate-500">{formatTime(item.recordedAt)}</span>
                   </div>
 
                   <h4 className="text-xs font-bold text-slate-100">{item.title}</h4>

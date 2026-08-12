@@ -1,4 +1,5 @@
-import React, { useEffect, useState } from 'react';
+import React, { useState } from 'react';
+import { usePolling } from '../../hooks/usePolling';
 import { Shield, ShieldAlert, CheckCircle2, XCircle, AlertTriangle, Lock, FileText, UserCheck } from 'lucide-react';
 import { GovernancePolicy, RiskAssessment } from '../../../shared/types';
 
@@ -35,11 +36,7 @@ export const GovernanceConsole: React.FC = () => {
     }
   };
 
-  useEffect(() => {
-    fetchGovernanceData();
-    const interval = setInterval(fetchGovernanceData, 3000);
-    return () => clearInterval(interval);
-  }, []);
+  usePolling(fetchGovernanceData, 3000);
 
   const handleAction = async (id: string, action: 'approve' | 'deny') => {
     try {

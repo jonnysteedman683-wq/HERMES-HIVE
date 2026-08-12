@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { formatTime } from '../../utils/format';
 import { HermesDecision } from '../../../shared/types';
 import { Bot, Send, Sparkles, CheckCircle2, Zap, ArrowRight, ShieldCheck, Terminal } from 'lucide-react';
 
@@ -167,7 +168,7 @@ export const HermesConsole: React.FC<HermesConsoleProps> = ({
 
                   <div className="text-[10px] text-slate-500 font-mono flex items-center justify-between pt-1 border-t border-slate-800/60">
                     <span>{dec.actions.length} Swarm Actions</span>
-                    <span>{new Date(dec.timestamp).toLocaleTimeString()}</span>
+                    <span>{formatTime(dec.timestamp)}</span>
                   </div>
                 </div>
               ))

@@ -85,103 +85,68 @@ export const DeepDiagnosticsConsole: React.FC = () => {
     fetchIncidentsAndProposals();
   }, []);
 
-  const handleTakeSnapshot = async () => {
+  /** POST a diagnostics action with the shared loading/try-finally wrapper; returns the response. */
+  const runAction = async (url: string, body?: unknown): Promise<Response | null> => {
     setLoading(true);
     try {
-      const res = await fetch('/api/v1/diagnostics/snapshots/take', {
+      return await fetch(url, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ reason: 'Manual Operator Checkpoint' }),
+        ...(body !== undefined
+          ? { headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) }
+          : {}),
       });
-      if (res.ok) {
-        setStatusMessage('New state snapshot recorded.');
-        fetchSnapshots();
-      }
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleTakeSnapshot = async () => {
+    const res = await runAction('/api/v1/diagnostics/snapshots/take', { reason: 'Manual Operator Checkpoint' });
+    if (res?.ok) {
+      setStatusMessage('New state snapshot recorded.');
+      fetchSnapshots();
     }
   };
 
   const handleWhyQuery = async () => {
     if (!whyQuery.trim()) return;
-    setLoading(true);
-    try {
-      const res = await fetch('/api/v1/diagnostics/why', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ query: whyQuery }),
-      });
-      if (res.ok) {
-        const d = await res.json();
-        setWhyReport(d.report);
-      }
-    } finally {
-      setLoading(false);
+    const res = await runAction('/api/v1/diagnostics/why', { query: whyQuery });
+    if (res?.ok) {
+      const d = await res.json();
+      setWhyReport(d.report);
     }
   };
 
   const handleApproveRepair = async (proposalId: string) => {
-    setLoading(true);
-    try {
-      const res = await fetch(`/api/v1/diagnostics/repairs/${proposalId}/approve`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ approvedBy: 'Executive Operator' }),
-      });
-      if (res.ok) {
-        setStatusMessage(`Repair ${proposalId} approved.`);
-        fetchIncidentsAndProposals();
-      }
-    } finally {
-      setLoading(false);
+    const res = await runAction(`/api/v1/diagnostics/repairs/${proposalId}/approve`, { approvedBy: 'Executive Operator' });
+    if (res?.ok) {
+      setStatusMessage(`Repair ${proposalId} approved.`);
+      fetchIncidentsAndProposals();
     }
   };
 
   const handleApplyRepair = async (proposalId: string) => {
-    setLoading(true);
-    try {
-      const res = await fetch(`/api/v1/diagnostics/repairs/${proposalId}/apply`, {
-        method: 'POST',
-      });
-      if (res.ok) {
-        setStatusMessage(`Repair ${proposalId} applied.`);
-        fetchIncidentsAndProposals();
-      }
-    } finally {
-      setLoading(false);
+    const res = await runAction(`/api/v1/diagnostics/repairs/${proposalId}/apply`);
+    if (res?.ok) {
+      setStatusMessage(`Repair ${proposalId} applied.`);
+      fetchIncidentsAndProposals();
     }
   };
 
   const handleRollbackRepair = async (proposalId: string) => {
-    setLoading(true);
-    try {
-      const res = await fetch(`/api/v1/diagnostics/repairs/${proposalId}/rollback`, {
-        method: 'POST',
-      });
-      if (res.ok) {
-        setStatusMessage(`Repair ${proposalId} rolled back.`);
-        fetchIncidentsAndProposals();
-      }
-    } finally {
-      setLoading(false);
+    const res = await runAction(`/api/v1/diagnostics/repairs/${proposalId}/rollback`);
+    if (res?.ok) {
+      setStatusMessage(`Repair ${proposalId} rolled back.`);
+      fetchIncidentsAndProposals();
     }
   };
 
   const handleChaosInjection = async (scenarioType: string) => {
-    setLoading(true);
-    try {
-      const res = await fetch('/api/v1/diagnostics/chaos', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ scenarioType }),
-      });
-      if (res.ok) {
-        setStatusMessage(`Chaos scenario '${scenarioType}' injected.`);
-        fetchTraces();
-        fetchIncidentsAndProposals();
-      }
-    } finally {
-      setLoading(false);
+    const res = await runAction('/api/v1/diagnostics/chaos', { scenarioType });
+    if (res?.ok) {
+      setStatusMessage(`Chaos scenario '${scenarioType}' injected.`);
+      fetchTraces();
+      fetchIncidentsAndProposals();
     }
   };
 

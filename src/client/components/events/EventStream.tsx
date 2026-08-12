@@ -1,6 +1,8 @@
 import React, { useState } from 'react';
+import { badgeFor, SEVERITY_BADGE } from '../../utils/badges';
+import { formatTime } from '../../utils/format';
 import { HiveEvent } from '../../../shared/types';
-import { Activity, Search, ShieldAlert, CheckCircle2, AlertTriangle, Info } from 'lucide-react';
+import { Activity, Search } from 'lucide-react';
 
 interface EventStreamProps {
   events: HiveEvent[];
@@ -22,19 +24,6 @@ export const EventStream: React.FC<EventStreamProps> = ({ events }) => {
     }
     return true;
   });
-
-  const getSeverityBadge = (severity: HiveEvent['severity']) => {
-    switch (severity) {
-      case 'error':
-        return { label: 'ERROR', bg: 'bg-red-500/20 text-red-300 border-red-500/40', icon: ShieldAlert };
-      case 'warning':
-        return { label: 'WARN', bg: 'bg-amber-500/20 text-amber-300 border-amber-500/40', icon: AlertTriangle };
-      case 'success':
-        return { label: 'SUCCESS', bg: 'bg-emerald-500/20 text-emerald-300 border-emerald-500/40', icon: CheckCircle2 };
-      default:
-        return { label: 'INFO', bg: 'bg-cyan-500/20 text-cyan-300 border-cyan-500/40', icon: Info };
-    }
-  };
 
   return (
     <div className="h-full flex flex-col gap-6">
@@ -98,7 +87,7 @@ export const EventStream: React.FC<EventStreamProps> = ({ events }) => {
             </div>
           ) : (
             filteredEvents.map((evt) => {
-              const badge = getSeverityBadge(evt.severity);
+              const badge = badgeFor(SEVERITY_BADGE, evt.severity);
               const Icon = badge.icon;
 
               return (
@@ -113,7 +102,7 @@ export const EventStream: React.FC<EventStreamProps> = ({ events }) => {
                     </div>
 
                     <span className="text-[10px] text-slate-500">
-                      {new Date(evt.timestamp).toLocaleTimeString()}
+                      {formatTime(evt.timestamp)}
                     </span>
                   </div>
 

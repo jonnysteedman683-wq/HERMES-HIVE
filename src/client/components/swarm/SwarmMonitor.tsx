@@ -1,4 +1,6 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
+import { formatTime } from '../../utils/format';
+import { usePolling } from '../../hooks/usePolling';
 import { Activity, GitMerge, XCircle, RotateCcw, Zap, Brain, Trophy, RefreshCw } from 'lucide-react';
 
 interface AgentScore { cycles: number; total_score: number; total_commits: number; avg_score: number }
@@ -24,7 +26,7 @@ export const SwarmMonitor: React.FC = () => {
     } catch { setError('Swarm data unavailable — swarm may not have run yet.'); }
   };
 
-  useEffect(() => { fetchData(); const i = setInterval(fetchData, SWARM_POLL_MS); return () => clearInterval(i); }, []);
+  usePolling(fetchData, SWARM_POLL_MS);
 
   if (error && !data) {
     return <div className="p-8 text-center text-slate-400">
@@ -130,7 +132,7 @@ export const SwarmMonitor: React.FC = () => {
 
       {/* Status bar */}
       <div className="text-xs text-slate-600 text-center">
-        Updated: {data?.timestamp ? new Date(data.timestamp).toLocaleTimeString() : '—'}
+        Updated: {formatTime(data?.timestamp)}
       </div>
     </div>
   );
