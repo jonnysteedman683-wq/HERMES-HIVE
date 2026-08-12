@@ -1,4 +1,4 @@
-// Standalone Stage 6 Test Suite Verification
+import { describe, it, expect } from 'vitest';
 import { hiveConsciousnessEngine } from '../server/collective/hiveConsciousnessEngine';
 import { dynamicTeamFormationEngine } from '../server/collective/dynamicTeamFormationEngine';
 import { collectiveDecisionEngine } from '../server/collective/collectiveDecisionEngine';
@@ -11,165 +11,161 @@ import { emergentStrategyEngine } from '../server/collective/emergentStrategyEng
 import { hiveHealthEngine } from '../server/collective/hiveHealthEngine';
 import { governanceEngine } from '../server/governance/governanceEngine';
 
-export function runStage6VerificationSuite() {
-  console.log('=== RUNNING STAGE 6 SWARM EVOLUTION SUITE ===');
+describe('Stage 6 — Swarm Evolution Suite', () => {
+  let prop: any;
 
-  // Scenario A
-  const team = dynamicTeamFormationEngine.formTeam(
-    'Audit PQC Cross-Hive Signatures',
-    'hive-security-gamma',
-    ['PQC_ATTESTATION', 'AUDITING'],
-    80000
-  );
-  if (!team || !team.teamId.includes('team-') || team.status !== 'ACTIVE') {
-    throw new Error('Scenario A failed: Dynamic team formation');
-  }
+  it('Scenario A: Dynamic team formation', () => {
+    const team = dynamicTeamFormationEngine.formTeam(
+      'Audit PQC Cross-Hive Signatures',
+      'hive-security-gamma',
+      ['PQC_ATTESTATION', 'AUDITING'],
+      80000
+    );
+    expect(team).toBeDefined();
+    expect(team.teamId).toContain('team-');
+    expect(team.status).toBe('ACTIVE');
+  });
 
-  // Scenario B
-  const prop = collectiveDecisionEngine.createProposal(
-    'Adopt Dynamic Token Sharding Protocol',
-    'Optimize cross-Hive RPC transport latency',
-    'agent-executive-prime',
-    [
-      { optionId: 'opt-a', description: 'Enable Dynamic Sharding', expectedOutcome: '30% speedup', riskLevel: 'LOW' },
-      { optionId: 'opt-b', description: 'Maintain Static Allocation', expectedOutcome: 'Baseline', riskLevel: 'LOW' },
-    ]
-  );
-  collectiveDecisionEngine.castVote(prop.proposalId, 'agent-executive-prime', 'Coordinator', 'opt-a', 1.5, 'Digital Twin confirmed latency drop', 0.98, false);
-  collectiveDecisionEngine.castVote(prop.proposalId, 'agent-perf-analyst', 'Profiler', 'opt-a', 1.2, 'Queue backlog reduced', 0.95, false);
-  const updated = collectiveDecisionEngine.castVote(
-    prop.proposalId,
-    'agent-sec-auditor',
-    'Auditor',
-    'opt-b',
-    1.1,
-    'Concern regarding burst overflow in Operations Hive',
-    0.90,
-    true,
-    'Telemetry logs telemetry-burst-081'
-  );
+  it('Scenario B: Decision consensus & dissent preservation', () => {
+    prop = collectiveDecisionEngine.createProposal(
+      'Adopt Dynamic Token Sharding Protocol',
+      'Optimize cross-Hive RPC transport latency',
+      'agent-executive-prime',
+      [
+        { optionId: 'opt-a', description: 'Enable Dynamic Sharding', expectedOutcome: '30% speedup', riskLevel: 'LOW' },
+        { optionId: 'opt-b', description: 'Maintain Static Allocation', expectedOutcome: 'Baseline', riskLevel: 'LOW' },
+      ]
+    );
+    collectiveDecisionEngine.castVote(prop.proposalId, 'agent-executive-prime', 'Coordinator', 'opt-a', 1.5, 'Digital Twin confirmed latency drop', 0.98, false);
+    collectiveDecisionEngine.castVote(prop.proposalId, 'agent-perf-analyst', 'Profiler', 'opt-a', 1.2, 'Queue backlog reduced', 0.95, false);
+    const updated = collectiveDecisionEngine.castVote(
+      prop.proposalId,
+      'agent-sec-auditor',
+      'Auditor',
+      'opt-b',
+      1.1,
+      'Concern regarding burst overflow in Operations Hive',
+      0.90,
+      true,
+      'Telemetry logs telemetry-burst-081'
+    );
 
-  if (!updated?.quorumMet || updated.consensusOptionId !== 'opt-a' || updated.dissentRecords.length !== 1) {
-    throw new Error('Scenario B failed: Decision consensus or dissent preservation');
-  }
+    expect(updated?.quorumMet).toBe(true);
+    expect(updated?.consensusOptionId).toBe('opt-a');
+    expect(updated?.dissentRecords.length).toBe(1);
+  });
 
-  // Scenario C
-  const analysis = collectiveLearningEngine.analyzeOutcome(
-    'Pre-flight Dependency Verification Experiment',
-    '0% build failures',
-    'Achieved 0% build failures with 100% sandbox isolation',
-    +31.0,
-    ['agent-executive-prime', 'agent-coder-beta'],
-    'Sandbox execution prevented side effects during trial exp-001',
-    'Pre-flight verification protocol eliminates 12% of missing import failures',
-    'Protocol safe for live promotion',
-    'Pre-flight verification protocol promoted to Institutional Memory'
-  );
-  if (!analysis || analysis.extractedLessons.length === 0) {
-    throw new Error('Scenario C failed: Collective learning extraction');
-  }
+  it('Scenario C: Collective learning extraction', () => {
+    const analysis = collectiveLearningEngine.analyzeOutcome(
+      'Pre-flight Dependency Verification Experiment',
+      '0% build failures',
+      'Achieved 0% build failures with 100% sandbox isolation',
+      +31.0,
+      ['agent-executive-prime', 'agent-coder-beta'],
+      'Sandbox execution prevented side effects during trial exp-001',
+      'Pre-flight verification protocol eliminates 12% of missing import failures',
+      'Protocol safe for live promotion',
+      'Pre-flight verification protocol promoted to Institutional Memory'
+    );
+    expect(analysis?.extractedLessons.length).toBeGreaterThan(0);
+  });
 
-  // Scenario D
-  const action = agentEvolutionEngine.proposeEvolution(
-    'CREATE_AGENT',
-    'Pre-Flight Dependency Verifier Agent',
-    'High volume of module missing errors during autonomous builds',
-    'STATIC_MODULE_PREFLIGHT_VERIFICATION'
-  );
-  if (!action || !action.governanceApproved) {
-    throw new Error('Scenario D failed: Evolution action proposal');
-  }
+  it('Scenario D: Evolution action proposal', () => {
+    const action = agentEvolutionEngine.proposeEvolution(
+      'CREATE_AGENT',
+      'Pre-Flight Dependency Verifier Agent',
+      'High volume of module missing errors during autonomous builds',
+      'STATIC_MODULE_PREFLIGHT_VERIFICATION'
+    );
+    expect(action?.governanceApproved).toBe(true);
+  });
 
-  // Scenario E
-  const bid = swarmEconomicsEngine.submitBid(
-    'task-vector-reindex-01',
-    'agent-perf-analyst',
-    'Performance Profiler Alpha',
-    0.96,
-    12000,
-    0.98,
-    0.25
-  );
-  if (!bid || bid.bidScore < 80) {
-    throw new Error('Scenario E failed: Swarm economics bidding');
-  }
+  it('Scenario E: Swarm economics bidding', () => {
+    const bid = swarmEconomicsEngine.submitBid(
+      'task-vector-reindex-01',
+      'agent-perf-analyst',
+      'Performance Profiler Alpha',
+      0.96,
+      12000,
+      0.98,
+      0.25
+    );
+    expect(bid?.bidScore).toBeGreaterThanOrEqual(80);
+  });
 
-  // Scenario F
-  const isProhibited = governanceEngine.checkAction('PROHIBITED_SYSTEM_MUTATION');
-  if (!isProhibited) {
-    throw new Error('Scenario F failed: Governance policy check');
-  }
+  it('Scenario F: Governance policy check', () => {
+    const isProhibited = governanceEngine.checkAction('PROHIBITED_SYSTEM_MUTATION');
+    expect(isProhibited).toBe(true);
+  });
 
-  // Scenario G
-  const metrics = hiveHealthEngine.getHealthMetrics();
-  if (!metrics || metrics.hiveHealthScore < 90 || metrics.explainability.length === 0) {
-    throw new Error('Scenario G failed: Hive health score');
-  }
+  it('Scenario G: Hive health score', () => {
+    const metrics = hiveHealthEngine.getHealthMetrics();
+    expect(metrics).toBeDefined();
+    expect(metrics.hiveHealthScore).toBeGreaterThanOrEqual(90);
+    expect(metrics.explainability.length).toBeGreaterThan(0);
+  });
 
-  // Scenario H: Transaction Handling & Idempotency
-  const doubleVote = collectiveDecisionEngine.castVote(
-    prop.proposalId,
-    'agent-sec-auditor',
-    'Auditor',
-    'opt-b',
-    1.1,
-    'Concern regarding burst overflow in Operations Hive',
-    0.90,
-    true,
-    'Telemetry logs telemetry-burst-081'
-  );
-  if (!doubleVote || doubleVote.votes.length < 3) {
-    throw new Error('Scenario H failed: Idempotent vote cast verification');
-  }
+  it('Scenario H: Idempotent vote cast verification', () => {
+    const doubleVote = collectiveDecisionEngine.castVote(
+      prop.proposalId,
+      'agent-sec-auditor',
+      'Auditor',
+      'opt-b',
+      1.1,
+      'Concern regarding burst overflow in Operations Hive',
+      0.90,
+      true,
+      'Telemetry logs telemetry-burst-081'
+    );
+    expect(doubleVote?.votes.length).toBeGreaterThanOrEqual(3);
+  });
 
-  // Scenario I: Concurrency Protections & Swarm Economics Quota Lock
-  const newBid = swarmEconomicsEngine.submitBid(
-    'task-vector-reindex-01',
-    'agent-sec-auditor',
-    'Security Auditor Gamma',
-    0.99,
-    18000,
-    0.99,
-    0.10
-  );
-  if (!newBid || newBid.bidScore <= 0) {
-    throw new Error('Scenario I failed: Concurrency lock & bid computation');
-  }
+  it('Scenario I: Concurrency lock & bid computation', () => {
+    const newBid = swarmEconomicsEngine.submitBid(
+      'task-vector-reindex-01',
+      'agent-sec-auditor',
+      'Security Auditor Gamma',
+      0.99,
+      18000,
+      0.99,
+      0.10
+    );
+    expect(newBid?.bidScore).toBeGreaterThan(0);
+  });
 
-  // Scenario J: Governance-Bypass Protection Test
-  const blockedProposal = collectiveDecisionEngine.createProposal(
-    'Bypass Auth Security Policy',
-    'Dangerous illegal override attempt',
-    'rogue-agent',
-    [{ optionId: 'opt-bypass_auth', description: 'bypass_auth execution', expectedOutcome: 'Bypass', riskLevel: 'CRITICAL' }]
-  );
-  collectiveDecisionEngine.castVote(blockedProposal.proposalId, 'rogue-agent', 'Rogue', 'opt-bypass_auth', 1, 'Bypass', 1);
-  collectiveDecisionEngine.castVote(blockedProposal.proposalId, 'rogue-agent-2', 'Rogue2', 'opt-bypass_auth', 1, 'Bypass', 1);
-  const blockedResult = collectiveDecisionEngine.castVote(blockedProposal.proposalId, 'rogue-agent-3', 'Rogue3', 'opt-bypass_auth', 1, 'Bypass', 1);
-  if (blockedResult?.status !== 'GOVERNANCE_BLOCKED') {
-    throw new Error('Scenario J failed: Governance bypass enforcement did not block prohibited proposal');
-  }
+  it('Scenario J: Governance bypass enforcement blocked prohibited proposal', () => {
+    const blockedProposal = collectiveDecisionEngine.createProposal(
+      'Bypass Auth Security Policy',
+      'Dangerous illegal override attempt',
+      'rogue-agent',
+      [{ optionId: 'opt-bypass_auth', description: 'bypass_auth execution', expectedOutcome: 'Bypass', riskLevel: 'CRITICAL' }]
+    );
+    collectiveDecisionEngine.castVote(blockedProposal.proposalId, 'rogue-agent', 'Rogue', 'opt-bypass_auth', 1, 'Bypass', 1);
+    collectiveDecisionEngine.castVote(blockedProposal.proposalId, 'rogue-agent-2', 'Rogue2', 'opt-bypass_auth', 1, 'Bypass', 1);
+    const blockedResult = collectiveDecisionEngine.castVote(blockedProposal.proposalId, 'rogue-agent-3', 'Rogue3', 'opt-bypass_auth', 1, 'Bypass', 1);
+    expect(blockedResult?.status).toBe('GOVERNANCE_BLOCKED');
+  });
 
-  // Scenario K: Reputation Security & Tamper Resistance
-  const repRecord = agentReputationEngine.recordPerformanceEvent('agent-executive-prime', 'Verified Stage 6 Hardening Pass execution', +1);
-  if (!repRecord || repRecord.compositeReputation < 95) {
-    throw new Error('Scenario K failed: Reputation tamper resistance & evidence audit trail');
-  }
+  it('Scenario K: Reputation tamper resistance & evidence audit trail', () => {
+    const repRecord = agentReputationEngine.recordPerformanceEvent('agent-executive-prime', 'Verified Stage 6 Hardening Pass execution', +1);
+    expect(repRecord?.compositeReputation).toBeGreaterThanOrEqual(95);
+  });
 
-  // Scenario L: Collective Memory Integrity & Source Provenance
-  const memoryRecord = collectiveMemoryEngine.addMemoryRecord(
-    'ARCHITECTURAL_KNOWLEDGE',
-    'Hardened transaction locks prevent double-spend in swarm token markets',
-    ['agent-executive-prime', 'agent-sec-auditor'],
-    'Stage 6 Hardening Verification Suite Pass',
-    0.99,
-    ['HARDENING', 'TRANSACTIONS', 'SECURITY']
-  );
-  if (!memoryRecord || memoryRecord.validationStatus !== 'VALIDATED') {
-    throw new Error('Scenario L failed: Collective memory validation & provenance provenance');
-  }
+  it('Scenario L: Collective memory validation & provenance', () => {
+    const memoryRecord = collectiveMemoryEngine.addMemoryRecord(
+      'ARCHITECTURAL_KNOWLEDGE',
+      'Hardened transaction locks prevent double-spend in swarm token markets',
+      ['agent-executive-prime', 'agent-sec-auditor'],
+      'Stage 6 Hardening Verification Suite Pass',
+      0.99,
+      ['HARDENING', 'TRANSACTIONS', 'SECURITY']
+    );
+    expect(memoryRecord?.validationStatus).toBe('VALIDATED');
+  });
 
-  console.log('=== STAGE 6 SUITE & HARDENING PASS PASSED SUCCESSFULLY ===');
-  return true;
-}
-
+  // Keep the imports referenced so tree-shaking/type-check does not flag them
+  it('Scenario M: Supporting engines are available', () => {
+    expect(hiveConsciousnessEngine).toBeDefined();
+    expect(emergentStrategyEngine).toBeDefined();
+  });
+});

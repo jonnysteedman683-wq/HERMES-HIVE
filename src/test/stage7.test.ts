@@ -1,43 +1,4 @@
-// Lightweight standalone test suite runner
-const describe = (name: string, fn: () => void) => {
-  console.log(`\n=== ${name} ===`);
-  fn();
-};
-
-const it = (name: string, fn: () => void | Promise<void>) => {
-  try {
-    const res = fn();
-    if (res && typeof res.then === 'function') {
-      res.then(() => console.log(`  ✓ ${name}`)).catch(err => console.error(`  ✗ ${name}:`, err));
-    } else {
-      console.log(`  ✓ ${name}`);
-    }
-  } catch (err) {
-    console.error(`  ✗ ${name}:`, err);
-  }
-};
-
-const expect = (actual: any) => ({
-  toBe: (expected: any) => {
-    if (actual !== expected) throw new Error(`Expected ${expected}, got ${actual}`);
-  },
-  toBeGreaterThan: (expected: number) => {
-    if (actual <= expected) throw new Error(`Expected > ${expected}, got ${actual}`);
-  },
-  toBeGreaterThanOrEqual: (expected: number) => {
-    if (actual < expected) throw new Error(`Expected >= ${expected}, got ${actual}`);
-  },
-  toContain: (expected: string) => {
-    if (typeof actual === 'string' && !actual.includes(expected)) {
-      throw new Error(`Expected string to contain ${expected}`);
-    }
-  },
-  toBeDefined: () => {
-    if (actual === undefined) throw new Error(`Expected value to be defined`);
-  },
-});
-
-const beforeEach = (fn: () => void) => fn();
+import { describe, it, expect, beforeEach } from 'vitest';
 import { hiveRegistry } from '../server/federation/hiveRegistry';
 import { hiveIdentityEngine } from '../server/federation/hiveIdentityEngine';
 import { hiveTrustEngine } from '../server/federation/hiveTrustEngine';
