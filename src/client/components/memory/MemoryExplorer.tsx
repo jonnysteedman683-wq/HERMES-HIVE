@@ -47,6 +47,10 @@ export const MemoryExplorer: React.FC<MemoryExplorerProps> = ({ records, onRefre
       setNewKey('');
       setNewContent('');
       onRefresh();
+    } catch (err) {
+      // Fire-and-forget onSubmit: swallow so the rejection cannot escape as
+      // an unhandled rejection.
+      console.error('[MemoryExplorer] Add memory failed:', err);
     } finally {
       setAdding(false);
     }

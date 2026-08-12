@@ -363,14 +363,27 @@ export function maybeStartWorker(options: WorkerOptions = {}): TaskWorker | null
     const worker = new TaskWorker(options);
     worker.start();
 
-    process.on('SIGTERM', async () => {
-      await worker.stop();
-      process.exit(0);
+    process.on('SIGTERM', () => {
+      // Signal handlers must never surface an unhandled rejection: if stop()
+      // throws (e.g. sqlite lock during drain), the rejection would escape the
+      // handler and process.exit would never run. Swallow + log + exit anyway.
+      worker
+        .stop()
+        .then(() => process.exit(0))
+        .catch((err) => {
+          console.error('[TaskWorker] SIGTERM drain failed:', err);
+          process.exit(1);
+        });
     });
 
-    process.on('SIGINT', async () => {
-      await worker.stop();
-      process.exit(0);
+    process.on('SIGINT', () => {
+      worker
+        .stop()
+        .then(() => process.exit(0))
+        .catch((err) => {
+          console.error('[TaskWorker] SIGINT drain failed:', err);
+          process.exit(1);
+        });
     });
 
     return worker;

@@ -31,6 +31,10 @@ export const Header: React.FC<HeaderProps> = ({
     try {
       await onSendObjective(quickPrompt);
       setQuickPrompt('');
+    } catch (err) {
+      // Fire-and-forget onSubmit: swallow so the rejection cannot escape as
+      // an unhandled rejection.
+      console.error('[Header] Quick objective failed:', err);
     } finally {
       setSending(false);
     }

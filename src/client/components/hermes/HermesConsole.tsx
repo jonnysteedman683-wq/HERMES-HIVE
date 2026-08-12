@@ -25,6 +25,10 @@ export const HermesConsole: React.FC<HermesConsoleProps> = ({
     try {
       await onSendCommand(command);
       setCommand('');
+    } catch (err) {
+      // onSubmit handlers are fire-and-forget: a rejection would escape as an
+      // unhandled rejection. Surface it in the console and keep the input.
+      console.error('[HermesConsole] Command failed:', err);
     } finally {
       setLoading(false);
     }

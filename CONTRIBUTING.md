@@ -45,10 +45,12 @@ Thank you for your interest in contributing to Hermes Hive! This document provid
 hermes-hive/
 ├── src/
 │   ├── client/          # Frontend code (React, Tailwind, motion)
-│   ├── server/          # Backend code (Express routes, handlers)
+│   ├── server/          # Backend code (Express middleware, engines)
 │   ├── shared/          # Shared types and utilities
-│   └── test/            # Test files
-├── assets/              # Static assets
+│   └── test/            # Vitest suites (node env, globals)
+├── docs/                # Vision doc + auto-exported human queue
+├── hive-core/           # Swarm machinery (build-in-repo → gate → promote)
+├── homepage/            # Static landing pages
 ├── .github/             # GitHub workflows and templates
 ├── Dockerfile           # Multi-stage Docker build
 ├── docker-compose.yml   # Docker compose configuration
@@ -59,6 +61,7 @@ hermes-hive/
 - `src/shared/types.ts` - Core type definitions
 - `src/server/apiMiddleware.ts` - API middleware entry point
 - `tsconfig.json` - TypeScript configuration
+- `.hive/` - live SwarmMonitor DB + swarm state (never edit manually)
 
 ## Coding Conventions
 
@@ -77,15 +80,22 @@ hermes-hive/
 
 ### Backend (Express)
 
-- Route handlers should be in `src/server/routes/`
-- Use async/await for route handlers
+- API routes live in `src/server/apiMiddleware.ts` (Connect-style middleware; no `src/server/routes/` dir)
+- Use async/await in the request handler — the top-level try/catch normalizes errors (ValidationError/NotFoundError/AuthError → structured status codes)
+- Fire-and-forget async handlers (timers, signal handlers, onClick/onSubmit) must catch their own rejections — a throw escaping an event callback is an unhandled rejection, not a recoverable error
 - Validate request types with the shared types
+
+### Async Error Handling
+
+- Every async function invoked fire-and-forget (setInterval/setTimeout callbacks, process.on handlers, React event handlers) needs try/catch or .catch — see the guarded patterns in `src/client/utils/pollLoop.ts` and `src/server/tasks/taskWorker.ts`
+- `try/finally` alone does NOT contain a rejection — pair it with `catch`
+- Awaited call chains (API middleware → engines) rely on the outer handler's try/catch; bare `throw`s inside route-adjacent code become 4xx/5xx responses
 
 ### Git
 
 - Use atomic commits with clear messages
-- Create feature branches from `develop` or `main`
-- Pull request to `main` or `develop` (as appropriate)
+- Work on feature branches from `main` (e.g. `fix/config-docs`); swarm cycles use `swarm-<sid>-c<cycle>-agent-<n>` worktree branches
+- Pull request to `main` (as appropriate)
 
 ## Commit Conventions
 

@@ -113,52 +113,76 @@ export const DeepDiagnosticsConsole: React.FC = () => {
   };
 
   const handleTakeSnapshot = async () => {
-    const res = await runAction('/api/v1/diagnostics/snapshots/take', { reason: 'Manual Operator Checkpoint' });
-    if (res?.ok) {
-      setStatusMessage('New state snapshot recorded.');
-      fetchSnapshots();
+    try {
+      const res = await runAction('/api/v1/diagnostics/snapshots/take', { reason: 'Manual Operator Checkpoint' });
+      if (res?.ok) {
+        setStatusMessage('New state snapshot recorded.');
+        fetchSnapshots();
+      }
+    } catch (err) {
+      setStatusMessage(`Snapshot failed: ${err instanceof Error ? err.message : String(err)}`);
     }
   };
 
   const handleWhyQuery = async () => {
     if (!whyQuery.trim()) return;
-    const res = await runAction('/api/v1/diagnostics/why', { query: whyQuery });
-    if (res?.ok) {
-      const d = await res.json();
-      setWhyReport(d.report);
+    try {
+      const res = await runAction('/api/v1/diagnostics/why', { query: whyQuery });
+      if (res?.ok) {
+        const d = await res.json();
+        setWhyReport(d.report);
+      }
+    } catch (err) {
+      setStatusMessage(`Why query failed: ${err instanceof Error ? err.message : String(err)}`);
     }
   };
 
   const handleApproveRepair = async (proposalId: string) => {
-    const res = await runAction(`/api/v1/diagnostics/repairs/${proposalId}/approve`, { approvedBy: 'Executive Operator' });
-    if (res?.ok) {
-      setStatusMessage(`Repair ${proposalId} approved.`);
-      fetchIncidentsAndProposals();
+    try {
+      const res = await runAction(`/api/v1/diagnostics/repairs/${proposalId}/approve`, { approvedBy: 'Executive Operator' });
+      if (res?.ok) {
+        setStatusMessage(`Repair ${proposalId} approved.`);
+        fetchIncidentsAndProposals();
+      }
+    } catch (err) {
+      setStatusMessage(`Repair approval failed: ${err instanceof Error ? err.message : String(err)}`);
     }
   };
 
   const handleApplyRepair = async (proposalId: string) => {
-    const res = await runAction(`/api/v1/diagnostics/repairs/${proposalId}/apply`);
-    if (res?.ok) {
-      setStatusMessage(`Repair ${proposalId} applied.`);
-      fetchIncidentsAndProposals();
+    try {
+      const res = await runAction(`/api/v1/diagnostics/repairs/${proposalId}/apply`);
+      if (res?.ok) {
+        setStatusMessage(`Repair ${proposalId} applied.`);
+        fetchIncidentsAndProposals();
+      }
+    } catch (err) {
+      setStatusMessage(`Repair apply failed: ${err instanceof Error ? err.message : String(err)}`);
     }
   };
 
   const handleRollbackRepair = async (proposalId: string) => {
-    const res = await runAction(`/api/v1/diagnostics/repairs/${proposalId}/rollback`);
-    if (res?.ok) {
-      setStatusMessage(`Repair ${proposalId} rolled back.`);
-      fetchIncidentsAndProposals();
+    try {
+      const res = await runAction(`/api/v1/diagnostics/repairs/${proposalId}/rollback`);
+      if (res?.ok) {
+        setStatusMessage(`Repair ${proposalId} rolled back.`);
+        fetchIncidentsAndProposals();
+      }
+    } catch (err) {
+      setStatusMessage(`Repair rollback failed: ${err instanceof Error ? err.message : String(err)}`);
     }
   };
 
   const handleChaosInjection = async (scenarioType: string) => {
-    const res = await runAction('/api/v1/diagnostics/chaos', { scenarioType });
-    if (res?.ok) {
-      setStatusMessage(`Chaos scenario '${scenarioType}' injected.`);
-      fetchTraces();
-      fetchIncidentsAndProposals();
+    try {
+      const res = await runAction('/api/v1/diagnostics/chaos', { scenarioType });
+      if (res?.ok) {
+        setStatusMessage(`Chaos scenario '${scenarioType}' injected.`);
+        fetchTraces();
+        fetchIncidentsAndProposals();
+      }
+    } catch (err) {
+      setStatusMessage(`Chaos injection failed: ${err instanceof Error ? err.message : String(err)}`);
     }
   };
 

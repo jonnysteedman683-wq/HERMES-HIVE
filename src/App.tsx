@@ -106,7 +106,15 @@ function HiveApp() {
     agentId: string,
     action: 'pause' | 'resume' | 'terminate' | 'restart'
   ) => {
-    await applyAgentAction(agentId, action);
+    try {
+      await applyAgentAction(agentId, action);
+    } catch (err) {
+      // applyAgentAction re-throws after logging; this handler is invoked
+      // fire-and-forget from an onClick, so swallow here or the rejection
+      // becomes an unhandled rejection.
+      console.error(`[App] Agent action ${action} failed:`, err);
+      return;
+    }
     if (selectedAgent && selectedAgent.id === agentId) {
       const updated = agents.find((a) => a.id === agentId);
       if (updated) setSelectedAgent(updated);
