@@ -41,7 +41,6 @@ export interface AgentReputation {
   verificationRate?: number;    // 0 to 1
   failureRate: number;         // 0 to 1
   recoveryRate?: number;        // 0 to 1
-  averageLatency?: number;      // ms
   averageLatencyMs?: number;    // ms
   averageCost?: number;         // token count or units
   toolReliability?: number;     // 0 to 1
