@@ -60,8 +60,8 @@ def verdict_glyph(ver: dict, mid: str) -> str:
     return VERDICT_GLYPH.get(verdict_of(ver, mid), "—")
 
 
-def read_gtd_queue() -> list[str]:
-    """Parse Backlog.gtd 'Human Queue' project into a task list."""
+def read_gtd_tasks() -> list[tuple[str, bool]]:
+    """Parse Backlog.gtd 'Human Queue' project into (task, checked) pairs."""
     gtd = ROOM / "Backlog.gtd"
     if not gtd.exists():
         return []
@@ -76,8 +76,21 @@ def read_gtd_queue() -> list[str]:
             in_queue = stripped.rstrip(":").lower() == "human queue"
             continue
         if in_queue and stripped.startswith("- "):
-            queue.append(stripped[2:].strip())
+            text = stripped[2:].strip()
+            checked = text.lower().startswith("[x]")
+            if checked:
+                text = text[3:].strip()
+            elif text.lower().startswith("[ ]"):
+                # canonical: drop the marker so fingerprints match across
+                # lanes (hive-mind strips "- [ ] " when reading the export)
+                text = text[3:].strip()
+            queue.append((text, checked))
     return queue
+
+
+def read_gtd_queue() -> list[str]:
+    """Compatibility shim: unchecked task texts only."""
+    return [t for t, checked in read_gtd_tasks() if not checked]
 
 
 def render_status(data: dict, ver: dict) -> str:
@@ -122,6 +135,20 @@ def render_status(data: dict, ver: dict) -> str:
         for m in blocked:
             lines.append(f"- **{m.get('id', '?')} — {m.get('name', '?')}** (attempts {m.get('attempts', 0)})")
             lines.append(f"  - _Awaiting human decision: queue directives in [[Backlog.gtd]] or mark done._")
+
+    # 🧠 Human intents — Obsidian → swarm bridge summary (from hive_intent_watch.py)
+    intents = HIVE / "intents.json"
+    try:
+        it = json.loads(intents.read_text(encoding="utf-8")).get("tasks", {})
+        nq = sum(1 for t in it.values() if t.get("status") == "queued")
+        nr = sum(1 for t in it.values() if t.get("status") == "running")
+        nw = sum(1 for t in it.values() if t.get("status") == "needs_review")
+        if nq or nr or nw:
+            lines += ["", "## 🧠 Human intents",
+                      f"- {nq} ⏳ queued · {nr} 🔨 running · {nw} 👀 need review — "
+                      f"see [[Intent.md]] for the full lifecycle."]
+    except Exception:
+        pass
 
     # 🔎 Verification — independent re-check of done milestones
     ver_ms = (ver or {}).get("milestones", {})
@@ -287,16 +314,20 @@ def write_cycle_snapshot(cycle: str, data: dict) -> bool:
 
 
 def export_human_queue() -> bool:
-    """Backlog.gtd 'Human Queue' → repo docs/human-queue.md (safe reverse lane)."""
-    queue = read_gtd_queue()
+    """Backlog.gtd 'Human Queue' → repo docs/human-queue.md (safe reverse lane).
+
+    Checkbox state is preserved (`[x]` stays `[x]`) so completions in Obsidian
+    survive the round-trip — hive_intent_watch.py reads them to mark intents done.
+    """
+    tasks = read_gtd_tasks()
     out = REPO / "docs" / "human-queue.md"
     body = [
         "# Human Queue (from Obsidian Backlog.gtd)",
         f"_Auto-exported {now_str()} by hive_status_sync.py_",
         "",
     ]
-    if queue:
-        body += ["## Tasks", ""] + [f"- [ ] {t}" for t in queue]
+    if tasks:
+        body += ["## Tasks", ""] + [f"- {'[x]' if checked else '[ ]'} {t}" for t, checked in tasks]
     else:
         body += ["_Empty — nothing queued by the human._"]
     out.write_text("\n".join(body) + "\n", encoding="utf-8")
