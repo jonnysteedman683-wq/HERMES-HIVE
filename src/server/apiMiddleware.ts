@@ -1,4 +1,6 @@
 import type { Plugin, Connect } from 'vite';
+import { requestLogger } from './middleware/requestLogger';
+import { normalizeError } from '../shared/errors';
 import { agentRegistry } from './registry/agentRegistry';
 import { missionEngine } from './missions/missionEngine';
 import { hermesEngine } from './hermes/hermesEngine';
@@ -209,6 +211,10 @@ export function apiMiddleware(): Plugin {
       } catch (err) {
         console.error('[ApiMiddleware] Failed to start TaskWorker:', err);
       }
+
+      // Per-request logging (method, url, status, response time, correlation id).
+      // Must run before the API handler so it sees the full request lifecycle.
+      server.middlewares.use(requestLogger());
 
       server.middlewares.use(async (req: Connect.IncomingMessage, res: any, next: Connect.NextFunction) => {
         const url = req.url || '';
@@ -1973,8 +1979,9 @@ export function apiMiddleware(): Plugin {
           // Fallthrough to next if route unhandled
           return next();
         } catch (err) {
-          console.error('[ApiMiddleware] Error handling API request:', err);
-          return jsonResponse({ error: 'Internal Server Error', message: err instanceof Error ? err.message : String(err) }, 500);
+          const normalized = normalizeError(err);
+          console.error('[ApiMiddleware] Error handling API request:', normalized);
+          return jsonResponse(normalized, normalized.statusCode);
         }
       });
     },
