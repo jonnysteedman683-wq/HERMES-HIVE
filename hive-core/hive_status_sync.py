@@ -49,6 +49,17 @@ def now_str() -> str:
     return datetime.now().strftime("%Y-%m-%d %H:%M")
 
 
+VERDICT_GLYPH = {"verified": "✅", "unverified": "⚠️", "n/a": "—"}
+
+
+def verdict_of(ver: dict, mid: str) -> str:
+    return (ver.get("milestones", {}).get(mid, {}) or {}).get("verdict", "")
+
+
+def verdict_glyph(ver: dict, mid: str) -> str:
+    return VERDICT_GLYPH.get(verdict_of(ver, mid), "—")
+
+
 def read_gtd_queue() -> list[str]:
     """Parse Backlog.gtd 'Human Queue' project into a task list."""
     gtd = ROOM / "Backlog.gtd"
@@ -69,7 +80,7 @@ def read_gtd_queue() -> list[str]:
     return queue
 
 
-def render_status(data: dict) -> str:
+def render_status(data: dict, ver: dict) -> str:
     now = now_str()
     cycle = data.get("cycle_counter", "?")
     ms = data.get("milestones", {})
@@ -112,6 +123,19 @@ def render_status(data: dict) -> str:
             lines.append(f"- **{m.get('id', '?')} — {m.get('name', '?')}** (attempts {m.get('attempts', 0)})")
             lines.append(f"  - _Awaiting human decision: queue directives in [[Backlog.gtd]] or mark done._")
 
+    # 🔎 Verification — independent re-check of done milestones
+    ver_ms = (ver or {}).get("milestones", {})
+    done = [(mid, m) for mid, m in ms.get("milestones", {}).items() if m.get("status") == "done"]
+    if done:
+        lines += ["", "## 🔎 Verification (independent re-check)", ""]
+        for mid, m in done:
+            v = ver_ms.get(mid, {}) or {}
+            verdict = v.get("verdict", "unverified")
+            glyph = VERDICT_GLYPH.get(verdict, "⚠️")
+            lines.append(f"- {glyph} **{mid} — {m.get('name', '?')}** ({verdict})")
+            if verdict != "verified":
+                lines.append(f"  - _{v.get('reason', 'not independently verified')}_")
+
     if plan:
         lines += ["", "## 📋 Current plan"]
         tasks = plan.get("tasks") or plan.get("slots") or []
@@ -141,7 +165,7 @@ def render_status(data: dict) -> str:
     return "\n".join(lines)
 
 
-def render_milestones(ms: dict) -> str:
+def render_milestones(ms: dict, ver: dict) -> str:
     lines = [
         "---",
         "tags:",
@@ -151,13 +175,13 @@ def render_milestones(ms: dict) -> str:
         "# 🗺️ Milestone Roadmap",
         "_Auto-rendered from `.hive/milestones.json`_",
         "",
-        "| # | Milestone | Status | Effort | Impact | Depends | Attempts |",
-        "|---|---|---|---|---|---|---|",
+        "| # | Milestone | Status | Verified | Effort | Impact | Depends | Attempts |",
+        "|---|---|---|---|---|---|---|---|",
     ]
     for mid, m in sorted(ms.get("milestones", {}).items()):
         dep = ", ".join(m.get("depends_on", [])) or "—"
         lines.append(
-            f"| {mid} | {m.get('name', '?')} | {m.get('status', '?')} | {m.get('effort', '?')} | {m.get('impact', '?')} | {dep} | {m.get('attempts', 0)} |"
+            f"| {mid} | {m.get('name', '?')} | {m.get('status', '?')} | {verdict_glyph(ver, mid)} | {m.get('effort', '?')} | {m.get('impact', '?')} | {dep} | {m.get('attempts', 0)} |"
         )
     cur = ms.get("current")
     if cur:
@@ -210,12 +234,12 @@ def write_swarm_plan_section(mp: dict) -> None:
     return
 
 
-def write_mirrors(data: dict) -> None:
+def write_mirrors(data: dict, ver: dict) -> None:
     ROOM.mkdir(parents=True, exist_ok=True)
     HISTORY.mkdir(parents=True, exist_ok=True)
 
-    (ROOM / "Status.md").write_text(render_status(data), encoding="utf-8")
-    (ROOM / "Milestones.md").write_text(render_milestones(data.get("milestones", {})), encoding="utf-8")
+    (ROOM / "Status.md").write_text(render_status(data, ver), encoding="utf-8")
+    (ROOM / "Milestones.md").write_text(render_milestones(data.get("milestones", {}), ver), encoding="utf-8")
 
     learn_src = HIVE / "learnings.md"
     if learn_src.exists():
@@ -291,8 +315,9 @@ def main() -> None:
         "heartbeat": load_json(HIVE / "heartbeat.json"),
         "prompt_plan": load_json(HIVE / "prompt_plan.json"),
     }
+    ver = load_json(HIVE / "verification.json")
 
-    write_mirrors(data)
+    write_mirrors(data, ver)
     write_swarm_plan_section(load_json(HIVE / "milestone_plan.json"))
     wrote_cycle = write_cycle_snapshot(data["cycle_counter"], data)
     export_human_queue()

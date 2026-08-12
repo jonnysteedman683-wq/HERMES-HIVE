@@ -13,3 +13,6 @@ dist/
 # environment
 .env
 *.log
+# Python bytecode
+__pycache__/
+*.pyc
