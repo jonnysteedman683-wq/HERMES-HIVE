@@ -58,13 +58,24 @@ class PolicyAndAuthorizationEngine {
       };
     }
 
-    // 4. Rate Limit Check
-    evaluatedRules.push('RULE_4_RATE_LIMIT');
+    // 4. Simulation Mode Check (Simulation is ALWAYS allowed if capability supports it)
+    if (request.executionMode === 'SIMULATE') {
+      evaluatedRules.push('RULE_4_SIMULATION_ALLOW');
+      return {
+        decision: 'ALLOW',
+        reason: 'Simulation request authorized for risk estimation and side-effect dry run.',
+        evaluatedRules,
+        timestamp,
+      };
+    }
+
+    // 5. Rate Limit Check (live executions only — simulations bypass the quota)
+    evaluatedRules.push('RULE_5_RATE_LIMIT');
     const key = `${request.authorizationContext.serviceIdentity}:${request.capabilityId}`;
     const now = Date.now();
     const tracker = this.rateLimitTracker.get(key) || { count: 0, windowResetTime: now + 60000 };
 
-    if (now > tracker.windowResetTime) {
+    if (now >= tracker.windowResetTime) {
       tracker.count = 0;
       tracker.windowResetTime = now + 60000;
     }
@@ -79,17 +90,6 @@ class PolicyAndAuthorizationEngine {
     }
     tracker.count += 1;
     this.rateLimitTracker.set(key, tracker);
-
-    // 5. Simulation Mode Check (Simulation is ALWAYS allowed if capability supports it)
-    if (request.executionMode === 'SIMULATE') {
-      evaluatedRules.push('RULE_5_SIMULATION_ALLOW');
-      return {
-        decision: 'ALLOW',
-        reason: 'Simulation request authorized for risk estimation and side-effect dry run.',
-        evaluatedRules,
-        timestamp,
-      };
-    }
 
     // 6. Risk Level & Human/Policy Approval Check
     evaluatedRules.push('RULE_6_RISK_POLICY_EVALUATION');
@@ -134,15 +134,25 @@ class PolicyAndAuthorizationEngine {
     };
   }
 
-  public checkIdempotency(key?: string): any | null {
+  public checkIdempotency(key?: string, executionMode?: string): any | null {
     if (!key) return null;
-    return this.idempotencyCache.get(key) || null;
+    return this.idempotencyCache.get(this.idempotencyCacheKey(key, executionMode)) || null;
   }
 
-  public recordIdempotency(key: string, result: any): void {
+  public recordIdempotency(key: string, result: any, executionMode?: string): void {
     if (key) {
-      this.idempotencyCache.set(key, result);
+      this.idempotencyCache.set(this.idempotencyCacheKey(key, executionMode), result);
     }
+  }
+
+  /**
+   * Idempotency results are cached per (key, executionMode). A SIMULATE dry-run
+   * is a different operation from a live EXECUTE even when the client reuses
+   * the same idempotency key, so the cache must not serve a simulation result
+   * back to a caller that has since asked for real execution.
+   */
+  private idempotencyCacheKey(key: string, executionMode?: string): string {
+    return `${key}::${executionMode ?? 'UNSPECIFIED'}`;
   }
 
   public getPendingApprovals(): CapabilityApprovalRequest[] {

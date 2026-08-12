@@ -17,7 +17,7 @@ export class CapabilityRouter {
 
     // 1. Idempotency Check
     if (request.idempotencyKey) {
-      const cached = policyAndAuthorizationEngine.checkIdempotency(request.idempotencyKey);
+      const cached = policyAndAuthorizationEngine.checkIdempotency(request.idempotencyKey, request.executionMode);
       if (cached) {
         return cached;
       }
@@ -188,7 +188,7 @@ export class CapabilityRouter {
       };
 
       if (request.idempotencyKey) {
-        policyAndAuthorizationEngine.recordIdempotency(request.idempotencyKey, response);
+        policyAndAuthorizationEngine.recordIdempotency(request.idempotencyKey, response, request.executionMode);
       }
 
       auditLogger.log({
@@ -258,7 +258,7 @@ export class CapabilityRouter {
       };
 
       if (request.idempotencyKey) {
-        policyAndAuthorizationEngine.recordIdempotency(request.idempotencyKey, response);
+        policyAndAuthorizationEngine.recordIdempotency(request.idempotencyKey, response, request.executionMode);
       }
 
       auditLogger.log({
