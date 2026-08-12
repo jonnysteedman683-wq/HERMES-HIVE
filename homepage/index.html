@@ -1,63 +1,571 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>HERMES-HIVE — Design Selection</title>
-<style>
-  :root { --bg:#05070c; --ink:#e8f0f2; --cyan:#39d7e6; --gold:#e8b64c; }
-  * { margin:0; padding:0; box-sizing:border-box; }
-  body { background:var(--bg); color:var(--ink); font-family:'Segoe UI', system-ui, sans-serif; min-height:100vh; }
-  header { text-align:center; padding:56px 20px 12px; }
-  h1 { font-weight:200; letter-spacing:.45em; font-size:clamp(28px,5vw,52px); text-shadow:0 0 24px rgba(57,215,230,.35); }
-  .sub { color:#8fa3ad; letter-spacing:.25em; font-size:13px; margin-top:10px; text-transform:uppercase; }
-  .grid { display:grid; grid-template-columns:repeat(auto-fit,minmax(320px,1fr)); gap:26px; padding:40px clamp(16px,4vw,60px) 70px; max-width:1500px; margin:0 auto; }
-  .card { background:#0a0f16; border:1px solid #1b2733; border-radius:14px; overflow:hidden; transition:transform .35s ease, box-shadow .35s ease, border-color .35s ease; display:flex; flex-direction:column; }
-  .card:hover { transform:translateY(-6px); border-color:var(--cyan); box-shadow:0 18px 50px -18px rgba(57,215,230,.35); }
-  .card img { width:100%; display:block; aspect-ratio:14/9; object-fit:cover; object-position:top; }
-  .meta { padding:20px 22px 24px; }
-  .meta h2 { font-weight:300; letter-spacing:.18em; font-size:17px; }
-  .meta .model { color:var(--gold); font-size:12px; letter-spacing:.12em; margin:6px 0 10px; text-transform:uppercase; }
-  .meta p { color:#93a5b0; font-size:13.5px; line-height:1.55; }
-  a.btn { display:inline-block; margin-top:16px; padding:10px 26px; border:1px solid var(--gold); color:var(--gold); text-decoration:none; letter-spacing:.22em; font-size:12px; text-transform:uppercase; border-radius:4px; transition:all .3s; }
-  a.btn:hover { background:rgba(232,182,76,.12); box-shadow:0 0 22px rgba(232,182,76,.35); }
-  footer { text-align:center; color:#5c6d78; font-size:12px; letter-spacing:.2em; padding-bottom:40px; }
-</style>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>HERMES-HIVE | Autonomous Multi-Repo AI Swarm</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+            background: #070409;
+            color: #f2e8d8;
+            overflow-x: hidden;
+            min-height: 100vh;
+            position: relative;
+        }
+
+        #canvas-container { position: fixed; inset: 0; z-index: 1; }
+        #hexCanvas { display: block; width: 100%; height: 100%; }
+
+        .vignette {
+            position: fixed; inset: 0; z-index: 2; pointer-events: none;
+            background:
+                radial-gradient(ellipse 90% 70% at 50% 42%, transparent 55%, rgba(10, 3, 1, 0.55) 100%),
+                radial-gradient(ellipse 120% 90% at 50% 110%, rgba(120, 40, 0, 0.10), transparent 60%);
+        }
+
+        /* ---------- top bar ---------- */
+        .topbar {
+            position: fixed; top: 0; left: 0; right: 0; z-index: 20;
+            display: flex; justify-content: space-between; align-items: center;
+            padding: 1.5rem 2.6rem;
+        }
+        .topbar .wordmark {
+            font-size: 0.78rem; font-weight: 200; letter-spacing: 0.34em; text-transform: uppercase; color: #fdf3e0;
+        }
+        .topbar .wordmark em { font-style: normal; color: #ffb347; }
+        .alive {
+            display: flex; align-items: center; gap: 0.6rem;
+            font-size: 0.7rem; font-weight: 300; letter-spacing: 0.26em; text-transform: uppercase; color: #a8917f;
+        }
+        .alive-dot {
+            width: 7px; height: 7px; border-radius: 50%;
+            background: #ffb347;
+            box-shadow: 0 0 10px rgba(255, 179, 71, 0.9), 0 0 22px rgba(255, 140, 40, 0.5);
+            animation: dotbeat 2.6s ease-in-out infinite;
+        }
+        @keyframes dotbeat {
+            0%, 100% { transform: scale(1); opacity: 1; }
+            7% { transform: scale(1.6); opacity: 1; }
+            20% { transform: scale(1.15); opacity: 0.85; }
+            38% { transform: scale(1); opacity: 0.75; }
+        }
+
+        /* ---------- content ---------- */
+        .content-overlay {
+            position: relative; z-index: 10;
+            display: flex; flex-direction: column; align-items: center; justify-content: center;
+            min-height: 100vh; padding: 7rem 2rem 7rem; text-align: center;
+        }
+
+        .hero-title {
+            font-size: clamp(3rem, 10vw, 6rem);
+            font-weight: 100;
+            letter-spacing: 0.32em;
+            text-transform: uppercase;
+            color: #fdf3e0;
+            text-shadow: 0 0 30px rgba(255, 170, 60, 0.35), 0 0 80px rgba(255, 120, 40, 0.15);
+            margin-bottom: 1rem;
+        }
+
+        .hero-tagline {
+            font-size: clamp(1rem, 2.5vw, 1.5rem);
+            font-weight: 200;
+            letter-spacing: 0.18em;
+            text-transform: lowercase;
+            color: #c3a8e8;
+            margin-bottom: 3.5rem;
+        }
+
+        .status-strip {
+            display: flex; gap: 3rem; justify-content: center; align-items: center;
+            margin-bottom: 2.6rem; flex-wrap: wrap;
+            padding: 1.4rem 3rem;
+            background: rgba(20, 10, 6, 0.55);
+            border: 1px solid rgba(255, 170, 60, 0.18);
+            border-radius: 100px;
+            backdrop-filter: blur(10px);
+        }
+
+        .status-item { display: flex; flex-direction: column; align-items: center; gap: 0.5rem; }
+        .status-value { font-size: 2rem; font-weight: 100; letter-spacing: 0.1em; color: #ffb347; }
+        .status-label { font-size: 0.72rem; font-weight: 300; letter-spacing: 0.22em; color: #8a7466; text-transform: uppercase; }
+        .status-separator { width: 1px; height: 3rem; background: linear-gradient(180deg, transparent, rgba(255, 170, 60, 0.35), transparent); }
+
+        .cta-button {
+            padding: 1.1rem 3rem; font-size: 1rem; font-weight: 300; letter-spacing: 0.3em; text-transform: uppercase;
+            color: #ffe9c9; background: transparent; border: 1px solid rgba(255, 150, 50, 0.7);
+            border-radius: 100px; cursor: pointer; text-decoration: none; display: inline-block; position: relative; overflow: hidden;
+            transition: box-shadow 0.5s ease, border-color 0.5s ease, transform 0.5s ease;
+        }
+
+        .cta-button:hover {
+            box-shadow: 0 0 34px rgba(255, 140, 40, 0.45), inset 0 0 22px rgba(255, 160, 60, 0.12);
+            border-color: #ffc27a;
+            transform: translateY(-1px);
+        }
+
+        /* ---------- live ticker ---------- */
+        .ticker {
+            margin-top: 2.4rem;
+            display: flex; align-items: center; gap: 0.8rem;
+            font-size: 0.78rem; font-weight: 300; letter-spacing: 0.12em;
+            color: #c3a8e8;
+            height: 1.6rem;
+            opacity: 1;
+            transition: opacity 0.4s ease;
+        }
+        .ticker .tick-tag { color: #ffb347; font-size: 0.7rem; }
+        .ticker.fade { opacity: 0; }
+
+        /* ---------- cycle progress ---------- */
+        .cycle-strip {
+            margin-top: 2rem;
+            width: min(360px, 78vw);
+            display: flex; align-items: center; gap: 1rem;
+        }
+        .cycle-label {
+            font-size: 0.64rem; font-weight: 300; letter-spacing: 0.24em; text-transform: uppercase;
+            color: #8a7466; white-space: nowrap;
+        }
+        .cycle-bar {
+            flex: 1; height: 2px; background: rgba(255, 170, 60, 0.12); border-radius: 2px; overflow: hidden;
+        }
+        .cycle-fill {
+            height: 100%; width: 0%;
+            background: linear-gradient(90deg, rgba(255, 170, 60, 0.4), #ffb347);
+            box-shadow: 0 0 8px rgba(255, 179, 71, 0.6);
+            transition: width 1s linear;
+        }
+        .cycle-pct {
+            font-size: 0.68rem; font-weight: 300; letter-spacing: 0.1em; color: #ffb347;
+            font-variant-numeric: tabular-nums; min-width: 3.2ch; text-align: right;
+        }
+
+        /* ---------- footer ---------- */
+        .footer {
+            position: fixed; bottom: 0; left: 0; right: 0; z-index: 20;
+            display: flex; justify-content: center; gap: 2.6rem;
+            padding: 1.2rem 2rem 1.6rem;
+            font-size: 0.68rem; font-weight: 300; letter-spacing: 0.26em; text-transform: uppercase;
+        }
+        .footer a { color: #6d5f55; text-decoration: none; transition: color 0.3s ease; }
+        .footer a:hover { color: #ffb347; }
+
+        @media (max-width: 768px) {
+            .status-strip { gap: 1.6rem; padding: 1.1rem 1.6rem; border-radius: 24px; }
+            .status-separator { display: none; }
+            .hero-title { letter-spacing: 0.2em; }
+            .topbar { padding: 1.1rem 1.4rem; }
+            .footer { gap: 1.6rem; }
+        }
+
+        .breathe { animation: breathe 3.5s ease-in-out infinite; }
+        @keyframes breathe { 0%, 100% { opacity: 1; } 50% { opacity: 0.86; } }
+    </style>
 </head>
 <body>
-<header>
-  <h1>HERMES-HIVE</h1>
-  <div class="sub">design team — three concepts · pick your hive</div>
-</header>
-<div class="grid">
-  <div class="card">
-    <img src="shot-A.png" alt="Variant A preview">
-    <div class="meta">
-      <h2>A — MINIMAL PRECISION</h2>
-      <div class="model">claude-sonnet-4.5</div>
-      <p>Hairline luminous hexagons on deep navy. A cyan-gold orb at the core. Calm, expensive, architectural — the hive as a precision instrument.</p>
-      <a class="btn" href="variant-A/index.html">Enter A</a>
+    <div id="canvas-container"><canvas id="hexCanvas"></canvas></div>
+    <div class="vignette"></div>
+
+    <div class="topbar">
+        <span class="wordmark">HERMES<em>·</em>HIVE</span>
+        <span class="alive"><span class="alive-dot"></span>hive: alive</span>
     </div>
-  </div>
-  <div class="card">
-    <img src="shot-B.png" alt="Variant B preview">
-    <div class="meta">
-      <h2>B — ORGANIC ENERGY</h2>
-      <div class="model">deepseek-chat</div>
-      <p>An amber heart-orb breathing inside a violet lattice. Four repo cells, nine numbered agent nodes, firefly particles carrying work. The hive as an organism.</p>
-      <a class="btn" href="variant-B/index.html">Enter B</a>
+
+    <div class="content-overlay">
+        <h1 class="hero-title breathe">HERMES-HIVE</h1>
+        <p class="hero-tagline">Autonomous multi-repo AI swarm</p>
+
+        <div class="status-strip">
+            <div class="status-item">
+                <div class="status-value">4</div>
+                <div class="status-label">Repositories</div>
+            </div>
+            <div class="status-separator"></div>
+            <div class="status-item">
+                <div class="status-value">9</div>
+                <div class="status-label">Agents / Cycle</div>
+            </div>
+            <div class="status-separator"></div>
+            <div class="status-item">
+                <div class="status-value">90</div>
+                <div class="status-label">Min Heartbeat</div>
+            </div>
+        </div>
+
+        <a class="cta-button" href="#" id="ctaBtn"><span>Enter the Hive</span></a>
+
+        <div class="ticker" id="ticker"><span class="tick-tag">◈</span><span id="tickerMsg">agent-01 · hermes-hive · lint clean</span></div>
+
+        <div class="cycle-strip">
+            <span class="cycle-label">Cycle 0421</span>
+            <div class="cycle-bar"><div class="cycle-fill" id="cycleFill"></div></div>
+            <span class="cycle-pct" id="cyclePct">0%</span>
+        </div>
     </div>
-  </div>
-  <div class="card">
-    <img src="shot-C.png" alt="Variant C preview">
-    <div class="meta">
-      <h2>C — TACTICAL HUD</h2>
-      <div class="model">nemotron-3-ultra</div>
-      <p>Emerald phosphor mission control. Scanlines, live readouts, agent IDs ticking on rotating hex cells, reactor-core orb. The hive as a live tactical display.</p>
-      <a class="btn" href="variant-C/index.html">Enter C</a>
+
+    <div class="footer">
+        <a href="#">Docs</a>
+        <a href="/">Dashboard</a>
+        <a href="#">GitHub</a>
     </div>
-  </div>
-</div>
-<footer>HERMES-HIVE · autonomous multi-repo ai swarm · 90-min heartbeat</footer>
+
+    <script>
+    (function () {
+        "use strict";
+        const canvas = document.getElementById('hexCanvas');
+        const ctx = canvas.getContext('2d');
+        if (!ctx) return;
+
+        const TAU = Math.PI * 2;
+        let W = 0, H = 0, cx = 0, cy = 0, dpr = 1, S = 60;
+
+        function resize() {
+            dpr = Math.min(window.devicePixelRatio || 1, 2);
+            W = window.innerWidth; H = window.innerHeight;
+            canvas.width = Math.round(W * dpr); canvas.height = Math.round(H * dpr);
+            ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+            cx = W / 2; cy = H / 2;
+            S = Math.min(W, H) / 11;
+        }
+        window.addEventListener('resize', resize);
+        resize();
+
+        // ---------- math / easing ----------
+        const clamp = function (v, a, b) { return v < a ? a : v > b ? b : v; };
+        function gauss(x, mu, s) { var d = (x - mu) / s; return Math.exp(-0.5 * d * d); }
+        function easeInOut(t) { return t < 0.5 ? 2 * t * t : 1 - Math.pow(-2 * t + 2, 2) / 2; }
+
+        // ---------- heartbeat (×1.3 faster: 3.4s -> 2.6s) ----------
+        const HEART_P = 2.6;
+        function heartPhase(t) { return (t % HEART_P) / HEART_P; }
+        function heartEnv(t) {
+            var ph = heartPhase(t);
+            return Math.max(gauss(ph, 0.0, 0.038), gauss(ph, 0.17, 0.032) * 0.85);
+        }
+        const RIPPLE_V = 8.1; // ripple speed, S units/sec (was 6.2)
+        function rippleAt(d, t) {
+            var ph = (t - (d / RIPPLE_V)) / HEART_P;
+            var p = ((ph % 1) + 1) % 1;
+            return Math.max(gauss(p, 0.0, 0.05), gauss(p, 0.17, 0.042) * 0.85);
+        }
+
+        // ---------- hex geometry ----------
+        function hexPath(x, y, r, rot) {
+            ctx.beginPath();
+            for (var i = 0; i < 6; i++) {
+                var a = rot + (TAU / 6) * i - Math.PI / 2;
+                var px = x + r * Math.cos(a), py = y + r * Math.sin(a);
+                if (i === 0) ctx.moveTo(px, py); else ctx.lineTo(px, py);
+            }
+            ctx.closePath();
+        }
+        function strokeHex(x, y, r, rot, color, alpha, lw) {
+            ctx.strokeStyle = color;
+            ctx.globalAlpha = alpha;
+            ctx.lineWidth = lw;
+            hexPath(x, y, r, rot);
+            ctx.stroke();
+            ctx.globalAlpha = 1;
+        }
+
+        // ---------- cell lattice (breathing ×1.3 faster) ----------
+        function buildCells(rot, time) {
+            var cells = [], i, a;
+            var repoDist = S * 1.18, repoSize = S * 0.42;
+            for (i = 0; i < 4; i++) {
+                a = rot + (TAU / 4) * i + Math.PI / 4;
+                cells.push({
+                    x: cx + repoDist * Math.cos(a), y: cy + repoDist * Math.sin(a),
+                    r: repoSize * (1 + 0.05 * Math.sin(time * 0.91 + i * 1.7)),
+                    kind: 'repo', dist: repoDist / S
+                });
+            }
+            var inDist = S * 2.5, inSize = S * 0.82;
+            for (i = 0; i < 6; i++) {
+                a = rot + (TAU / 6) * i;
+                cells.push({
+                    x: cx + inDist * Math.cos(a), y: cy + inDist * Math.sin(a),
+                    r: inSize * (1 + 0.045 * Math.sin(time * 0.81 + i * 1.3)),
+                    kind: 'inner', dist: inDist / S
+                });
+            }
+            var outDist = S * 4.25, outSize = S * 0.66;
+            for (i = 0; i < 9; i++) {
+                a = rot + (TAU / 9) * i;
+                cells.push({
+                    x: cx + outDist * Math.cos(a), y: cy + outDist * Math.sin(a),
+                    r: outSize * (1 + 0.05 * Math.sin(time * 0.72 + i * 0.9)),
+                    kind: 'outer', dist: outDist / S
+                });
+            }
+            return cells;
+        }
+
+        // ---------- firefly motes (faster ×1.3) ----------
+        var cellsRef = [];
+        var motes = [];
+        function spawnMote(force) {
+            var n = cellsRef.length;
+            var src = Math.floor(Math.random() * n);
+            var dst = Math.floor(Math.random() * n);
+            if (dst === src) dst = (dst + 1) % n;
+            motes.push({
+                src: src, dst: dst, t: force ? Math.random() : 0,
+                dur: 1.7 + Math.random() * 2.5,
+                ph: Math.random() * TAU,
+                flick: 1.0 + Math.random() * 3.1,
+                warm: Math.random() < 0.62,
+                size: (1.0 + Math.random() * 1.6) * (S / 60),
+                trail: []
+            });
+        }
+        function ensureMotes() {
+            if (cellsRef.length < 4) return;
+            var target = Math.round(clamp(W * H / 34000, 18, 42));
+            while (motes.length < target) spawnMote(true);
+            if (motes.length > target) motes.length = target;
+        }
+
+        function drawMotes(dt, time) {
+            ctx.save();
+            ctx.globalCompositeOperation = 'lighter';
+            for (var i = 0; i < motes.length; i++) {
+                var m = motes[i];
+                m.t += dt / m.dur;
+                if (m.t >= 1) {
+                    m.src = m.dst;
+                    m.dst = Math.floor(Math.random() * cellsRef.length);
+                    if (m.dst === m.src) m.dst = (m.dst + 1) % cellsRef.length;
+                    m.t = 0; m.ph = Math.random() * TAU;
+                }
+                var e = easeInOut(m.t);
+                var a = cellsRef[m.src], b = cellsRef[m.dst];
+                var dx = b.x - a.x, dy = b.y - a.y, len = Math.hypot(dx, dy) || 1;
+                var px = -dy / len, py = dx / len;
+                var wob = Math.sin(m.t * TAU + m.ph) * len * 0.10;
+                var x = a.x + dx * e + px * wob;
+                var y = a.y + dy * e + py * wob;
+                var flick = 0.30 + 0.42 * (0.5 + 0.5 * Math.sin(time * m.flick + m.ph));
+                var color = m.warm ? '255,170,60' : '168,120,255';
+
+                m.trail.push([x, y]);
+                if (m.trail.length > 5) m.trail.shift();
+                for (var j = 1; j < m.trail.length; j++) {
+                    var t0 = j / (m.trail.length - 1);
+                    ctx.strokeStyle = 'rgba(' + color + ',' + (flick * t0 * 0.35).toFixed(3) + ')';
+                    ctx.lineWidth = m.size * t0 * 0.8;
+                    ctx.beginPath();
+                    ctx.moveTo(m.trail[j - 1][0], m.trail[j - 1][1]);
+                    ctx.lineTo(m.trail[j][0], m.trail[j][1]);
+                    ctx.stroke();
+                }
+
+                var gr = ctx.createRadialGradient(x, y, 0, x, y, m.size * 3.2);
+                gr.addColorStop(0, 'rgba(' + color + ',' + (0.9 * flick).toFixed(3) + ')');
+                gr.addColorStop(1, 'rgba(' + color + ',0)');
+                ctx.fillStyle = gr;
+                ctx.beginPath(); ctx.arc(x, y, m.size * 3.2, 0, TAU); ctx.fill();
+
+                ctx.fillStyle = 'rgba(255,240,220,' + (0.85 * flick).toFixed(3) + ')';
+                ctx.beginPath(); ctx.arc(x, y, m.size * 0.55, 0, TAU); ctx.fill();
+            }
+            ctx.restore();
+        }
+
+        // ---------- central heart orb (faster ×1.3) ----------
+        function drawOrb(time) {
+            var env = heartEnv(time);
+            var slow = 0.5 + 0.5 * Math.sin(time * 0.65);
+            var R = S * 0.36 * (1 + 0.30 * env + 0.05 * slow);
+            ctx.save();
+            ctx.globalCompositeOperation = 'lighter';
+
+            var g = ctx.createRadialGradient(cx, cy, 0, cx, cy, R * 4.2);
+            g.addColorStop(0, 'rgba(150,90,255,' + (0.10 + 0.10 * env).toFixed(3) + ')');
+            g.addColorStop(1, 'rgba(150,90,255,0)');
+            ctx.fillStyle = g; ctx.beginPath(); ctx.arc(cx, cy, R * 4.2, 0, TAU); ctx.fill();
+
+            g = ctx.createRadialGradient(cx, cy, 0, cx, cy, R * 2.1);
+            g.addColorStop(0, 'rgba(255,150,50,' + (0.34 + 0.28 * env).toFixed(3) + ')');
+            g.addColorStop(1, 'rgba(255,120,40,0)');
+            ctx.fillStyle = g; ctx.beginPath(); ctx.arc(cx, cy, R * 2.1, 0, TAU); ctx.fill();
+
+            g = ctx.createRadialGradient(cx, cy, 0, cx, cy, R);
+            g.addColorStop(0, 'rgba(255,246,225,0.95)');
+            g.addColorStop(0.45, 'rgba(255,190,110,0.9)');
+            g.addColorStop(0.8, 'rgba(255,120,50,0.55)');
+            g.addColorStop(1, 'rgba(255,90,30,0.15)');
+            ctx.fillStyle = g; ctx.beginPath(); ctx.arc(cx, cy, R, 0, TAU); ctx.fill();
+
+            for (var i = 0; i < 5; i++) {
+                var a = time * (1.04 + i * 0.3) + i * 2.1;
+                var rr = R * (0.25 + 0.5 * Math.abs(Math.sin(time * 0.39 + i)));
+                var sx = cx + Math.cos(a) * rr, sy = cy + Math.sin(a) * rr;
+                ctx.fillStyle = 'rgba(255,220,170,' + (0.25 + 0.2 * Math.sin(time * 2.6 + i)).toFixed(3) + ')';
+                ctx.beginPath(); ctx.arc(sx, sy, R * 0.08, 0, TAU); ctx.fill();
+            }
+            ctx.restore();
+        }
+
+        // ---------- lattice + synchronized ripple ----------
+        function drawLattice(rot, time) {
+            var cells = buildCells(rot, time);
+            cellsRef = cells;
+
+            ctx.save();
+            ctx.globalCompositeOperation = 'lighter';
+            var ph2;
+            for (var pi = 0; pi < 2; pi++) {
+                ph2 = heartPhase(time) - (pi === 0 ? 0 : 0.17);
+                if (ph2 > 0 && ph2 < 0.42) {
+                    var rr = RIPPLE_V * S * ph2;
+                    var al = (1 - ph2 / 0.42) * 0.28;
+                    ctx.strokeStyle = 'rgba(255,180,90,' + al.toFixed(3) + ')';
+                    ctx.lineWidth = 1.2;
+                    ctx.beginPath(); ctx.arc(cx, cy, rr, 0, TAU); ctx.stroke();
+                    ctx.strokeStyle = 'rgba(255,200,120,' + (al * 0.5).toFixed(3) + ')';
+                    ctx.lineWidth = 0.6;
+                    ctx.beginPath(); ctx.arc(cx, cy, rr * 0.82, 0, TAU); ctx.stroke();
+                }
+            }
+            ctx.restore();
+
+            var repo = [], inner = [], outer = [], i, c;
+            for (i = 0; i < cells.length; i++) {
+                c = cells[i];
+                if (c.kind === 'repo') repo.push(c);
+                else if (c.kind === 'inner') inner.push(c);
+                else outer.push(c);
+            }
+
+            ctx.save();
+            var dMid, b;
+            for (i = 0; i < inner.length; i++) {
+                var n = repo[i % repo.length];
+                c = inner[i];
+                dMid = (c.dist + n.dist) / 2;
+                b = rippleAt(dMid, time);
+                ctx.strokeStyle = 'rgba(255,150,60,' + (0.06 + 0.5 * b).toFixed(3) + ')';
+                ctx.lineWidth = 0.5 + 1.2 * b;
+                ctx.beginPath(); ctx.moveTo(n.x, n.y); ctx.lineTo(c.x, c.y); ctx.stroke();
+            }
+            for (i = 0; i < outer.length; i++) {
+                c = outer[i];
+                var best = inner[0], bd = Infinity, k;
+                for (k = 0; k < inner.length; k++) {
+                    var dd = Math.hypot(c.x - inner[k].x, c.y - inner[k].y);
+                    if (dd < bd) { bd = dd; best = inner[k]; }
+                }
+                dMid = (c.dist + best.dist) / 2;
+                b = rippleAt(dMid, time);
+                ctx.strokeStyle = 'rgba(255,140,70,' + (0.05 + 0.45 * b).toFixed(3) + ')';
+                ctx.lineWidth = 0.5 + 1.0 * b;
+                ctx.beginPath(); ctx.moveTo(best.x, best.y); ctx.lineTo(c.x, c.y); ctx.stroke();
+            }
+            ctx.restore();
+
+            for (i = 0; i < cells.length; i++) {
+                c = cells[i];
+                b = rippleAt(c.dist, time);
+
+                ctx.save();
+                ctx.globalCompositeOperation = 'lighter';
+                var glowA = 0.05 + 0.30 * b;
+                var gg = ctx.createRadialGradient(c.x, c.y, 0, c.x, c.y, c.r * 2.4);
+                gg.addColorStop(0, 'rgba(255,140,50,' + glowA.toFixed(3) + ')');
+                gg.addColorStop(1, 'rgba(255,140,50,0)');
+                ctx.fillStyle = gg;
+                ctx.beginPath(); ctx.arc(c.x, c.y, c.r * 2.4, 0, TAU); ctx.fill();
+                ctx.restore();
+
+                var col = c.kind === 'outer' ? '180,140,255' : (c.kind === 'repo' ? '255,190,90' : '255,165,70');
+                var baseA = c.kind === 'outer' ? 0.30 : c.kind === 'repo' ? 0.5 : 0.38;
+                strokeHex(c.x, c.y, c.r, rot, 'rgb(' + col + ')',
+                    clamp(baseA + 0.55 * b, 0, 0.95), c.kind === 'repo' ? 1.3 : 0.9);
+
+                ctx.fillStyle = 'rgba(255,230,190,' + clamp(0.2 + 0.6 * b, 0, 0.9).toFixed(3) + ')';
+                for (var v = 0; v < 6; v++) {
+                    var va = rot + (TAU / 6) * v - Math.PI / 2;
+                    ctx.beginPath();
+                    ctx.arc(c.x + c.r * Math.cos(va), c.y + c.r * Math.sin(va), c.kind === 'outer' ? 1.1 : 1.5, 0, TAU);
+                    ctx.fill();
+                }
+            }
+        }
+
+        // ---------- main loop (rotation ×1.3 faster) ----------
+        var rot = 0, last = performance.now();
+        function frame(now) {
+            var dt = Math.min((now - last) / 1000, 0.05);
+            last = now;
+            var time = now / 1000;
+
+            ctx.fillStyle = '#070409';
+            ctx.fillRect(0, 0, W, H);
+            var g = ctx.createRadialGradient(cx, cy, S * 2, cx, cy, S * 9);
+            g.addColorStop(0, 'rgba(60,18,6,0.35)');
+            g.addColorStop(1, 'rgba(0,0,0,0)');
+            ctx.fillStyle = g;
+            ctx.fillRect(0, 0, W, H);
+
+            var speed = 0.13 + 0.039 * Math.sin(time * 0.35); // was 0.10 + 0.03 * sin(t*0.27)
+            rot += dt * speed;
+
+            drawLattice(rot, time);
+            drawOrb(time);
+            ensureMotes();
+            drawMotes(dt, time);
+
+            requestAnimationFrame(frame);
+        }
+        requestAnimationFrame(frame);
+
+        // ---------- ticker (agent activity feed) ----------
+        var tickerMsgs = [
+            "agent-01 · hermes-hive · lint clean",
+            "agent-03 · sentinel-main · 3 tests passed",
+            "agent-07 · gtdown · build ok",
+            "agent-05 · gtdown-obsidian · archive synced",
+            "agent-09 · sentinel-main · rules match",
+            "agent-02 · hermes-hive · docs updated",
+            "agent-06 · gtdown · commit merged",
+            "agent-04 · gtdown-obsidian · manifest rebuilt"
+        ];
+        var tickerEl = document.getElementById('ticker');
+        var tickerMsg = document.getElementById('tickerMsg');
+        var ti = 0;
+        function tickerTick() {
+            tickerEl.classList.add('fade');
+            setTimeout(function () {
+                tickerMsg.textContent = tickerMsgs[ti % tickerMsgs.length];
+                ti++;
+                tickerEl.classList.remove('fade');
+            }, 400);
+        }
+        setInterval(tickerTick, 2200);
+
+        // ---------- cycle progress (90-min modulo, live) ----------
+        var cycleFill = document.getElementById('cycleFill');
+        var cyclePct = document.getElementById('cyclePct');
+        function cycleTick() {
+            var sec = (Date.now() / 1000) % 5400;
+            var pct = Math.floor(sec / 5400 * 100);
+            cycleFill.style.width = pct + '%';
+            cyclePct.textContent = pct + '%';
+        }
+        cycleTick();
+        setInterval(cycleTick, 1000);
+
+        // ---------- CTA ----------
+        document.getElementById('ctaBtn').addEventListener('click', function (ev) {
+            ev.preventDefault();
+            window.location.href = '/';
+        });
+    })();
+    </script>
 </body>
 </html>

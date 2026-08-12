@@ -1,24 +1,130 @@
 @import "tailwindcss";
 
+/* ============================================================
+   HERMES-HIVE - Variant-B design system  (Organic Energy)
+   ------------------------------------------------------------
+   Near-black warm cosmic base, amber heart, violet secondary,
+   hairline luminous strokes. Remaps Tailwind default color
+   scales so existing slate and cyan utility classes across the
+   dashboard adopt the homepage aesthetic globally.
+   ============================================================ */
+
+@theme {
+  /* -- Surface scale: warm cosmic near-black (was cool slate) -- */
+  --color-slate-950: #060409;
+  --color-slate-900: #0d0910;
+  --color-slate-800: #1a1320;
+  --color-slate-700: #2a1f33;
+  --color-slate-600: #3d2f47;
+  --color-slate-500: #6b5a72;
+  --color-slate-400: #9a8aa0;
+  --color-slate-300: #c3b3c9;
+  --color-slate-200: #ddd0e0;
+  --color-slate-100: #f2e8f0;
+  --color-slate-50:  #faf5f8;
+
+  /* -- Primary accent: amber heart-glow (remaps cyan usage) -- */
+  --color-cyan-950: #2b1602;
+  --color-cyan-900: #3d2103;
+  --color-cyan-800: #5e340a;
+  --color-cyan-700: #8a4e0f;
+  --color-cyan-600: #c06f14;
+  --color-cyan-500: #ffb347;
+  --color-cyan-400: #ffc266;
+  --color-cyan-300: #ffd28a;
+  --color-cyan-200: #ffe1ad;
+  --color-cyan-100: #fff0d6;
+
+  /* -- Secondary accent: violet (repoint purple + keep character) -- */
+  --color-purple-950: #180a2b;
+  --color-purple-900: #22103d;
+  --color-purple-800: #34195e;
+  --color-purple-700: #4a2585;
+  --color-purple-600: #6636b0;
+  --color-purple-500: #a86cff;
+  --color-purple-400: #bd8cff;
+  --color-purple-300: #d0adff;
+  --color-purple-200: #e2ccff;
+  --color-purple-100: #f2e6ff;
+
+  /* -- Support: emerald -> soft ember-lime for "healthy/pass" states -- */
+  --color-emerald-500: #7fd88a;
+  --color-emerald-400: #9ce6a4;
+  --color-emerald-300: #b9edbe;
+
+  /* -- Amber stays amber (already on-palette) -- */
+}
+
 @layer base {
   body {
     @apply bg-slate-950 text-slate-100 antialiased font-sans;
     font-feature-settings: "cv02", "cv03", "cv04", "cv11";
+    /* faint radial ember haze under everything */
+    background-image:
+      radial-gradient(ellipse 90% 60% at 50% -10%, rgba(255, 140, 40, 0.06), transparent 60%),
+      radial-gradient(ellipse 70% 50% at 50% 110%, rgba(168, 108, 255, 0.05), transparent 60%);
+    background-attachment: fixed;
   }
 
-  /* Custom Cyber Dark Scrollbars */
+  ::selection {
+    background: rgba(255, 179, 71, 0.28);
+    color: #fff6e6;
+  }
+
+  /* Hairline luminous scrollbars */
   ::-webkit-scrollbar {
-    width: 6px;
-    height: 6px;
+    width: 7px;
+    height: 7px;
   }
   ::-webkit-scrollbar-track {
-    background: rgba(15, 23, 42, 0.6);
+    background: rgba(13, 9, 16, 0.6);
   }
   ::-webkit-scrollbar-thumb {
-    background: rgba(51, 65, 85, 0.8);
+    background: rgba(61, 47, 71, 0.8);
     border-radius: 9999px;
   }
   ::-webkit-scrollbar-thumb:hover {
-    background: rgba(6, 182, 212, 0.8);
+    background: rgba(255, 179, 71, 0.7);
+  }
+}
+
+@layer utilities {
+  /* -- Reusable variant-B glow language -- */
+  .glow-amber {
+    box-shadow: 0 0 24px -6px rgba(255, 140, 40, 0.45),
+                inset 0 0 18px -12px rgba(255, 179, 71, 0.5);
+  }
+  .glow-amber-strong {
+    box-shadow: 0 0 34px -4px rgba(255, 140, 40, 0.6),
+                inset 0 0 22px -10px rgba(255, 179, 71, 0.35);
+  }
+  .glow-violet {
+    box-shadow: 0 0 24px -6px rgba(168, 108, 255, 0.4);
+  }
+  .text-glow-amber {
+    text-shadow: 0 0 18px rgba(255, 179, 71, 0.5), 0 0 44px rgba(255, 120, 40, 0.2);
+  }
+  .hairline {
+    border-width: 1px;
+    border-color: rgba(255, 179, 71, 0.14);
+  }
+
+  /* -- Heartbeat: the shared organic pulse (2.6s, matches homepage) -- */
+  .heartbeat {
+    animation: hh-heartbeat 2.6s ease-in-out infinite;
+  }
+  @keyframes hh-heartbeat {
+    0%, 100% { transform: scale(1); opacity: 1; }
+    7%   { transform: scale(1.55); opacity: 1; }
+    20%  { transform: scale(1.12); opacity: 0.9; }
+    38%  { transform: scale(1); opacity: 0.78; }
+  }
+
+  .breathe-slow {
+    animation: hh-breathe 4s ease-in-out infinite;
+  }
+  @keyframes hh-breathe {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.82; }
   }
 }

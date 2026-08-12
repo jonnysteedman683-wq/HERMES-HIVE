@@ -175,49 +175,49 @@ export const HiveDashboard: React.FC<HiveDashboardProps> = ({
     <div className="h-full overflow-y-auto space-y-6 pr-1">
       {/* Top Quick Metrics */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-        <div className="p-4 rounded-xl bg-slate-950 border border-slate-800/80 shadow-lg flex items-center gap-3">
-          <div className="w-10 h-10 rounded-xl bg-cyan-500/10 border border-cyan-500/30 flex items-center justify-center text-cyan-400">
+        <div className="p-4 rounded-xl bg-slate-950/60 border border-amber-500/12 hover:border-amber-500/30 glow-amber flex items-center gap-3 transition-all">
+          <div className="w-10 h-10 rounded-xl bg-amber-500/10 border border-amber-500/30 flex items-center justify-center text-amber-400">
             <Network className="w-5 h-5" />
           </div>
           <div>
-            <div className="text-[10px] font-mono text-slate-400 uppercase tracking-wider">Active Swarm</div>
-            <div className="text-lg font-black text-slate-100 font-mono">
+            <div className="text-[10px] font-mono text-slate-400 uppercase tracking-[0.2em]">Active Swarm</div>
+            <div className="text-lg font-light text-slate-100 font-mono">
               {agents.length} <span className="text-xs font-normal text-slate-500">Agents</span>
             </div>
           </div>
         </div>
 
-        <div className="p-4 rounded-xl bg-slate-950 border border-slate-800/80 shadow-lg flex items-center gap-3">
+        <div className="p-4 rounded-xl bg-slate-950/60 border border-emerald-500/12 hover:border-emerald-500/30 flex items-center gap-3 transition-all">
           <div className="w-10 h-10 rounded-xl bg-emerald-500/10 border border-emerald-500/30 flex items-center justify-center text-emerald-400">
             <Target className="w-5 h-5" />
           </div>
           <div>
-            <div className="text-[10px] font-mono text-slate-400 uppercase tracking-wider">Missions Done</div>
-            <div className="text-lg font-black text-slate-100 font-mono">
+            <div className="text-[10px] font-mono text-slate-400 uppercase tracking-[0.2em]">Missions Done</div>
+            <div className="text-lg font-light text-slate-100 font-mono">
               {completedMissions.length} <span className="text-xs font-normal text-slate-500">Completed</span>
             </div>
           </div>
         </div>
 
-        <div className="p-4 rounded-xl bg-slate-950 border border-slate-800/80 shadow-lg flex items-center gap-3">
+        <div className="p-4 rounded-xl bg-slate-950/60 border border-amber-500/12 hover:border-amber-500/30 flex items-center gap-3 transition-all">
           <div className="w-10 h-10 rounded-xl bg-amber-500/10 border border-amber-500/30 flex items-center justify-center text-amber-400">
             <Zap className="w-5 h-5" />
           </div>
           <div>
-            <div className="text-[10px] font-mono text-slate-400 uppercase tracking-wider">Tokens Processed</div>
-            <div className="text-lg font-black text-slate-100 font-mono">
+            <div className="text-[10px] font-mono text-slate-400 uppercase tracking-[0.2em]">Tokens Processed</div>
+            <div className="text-lg font-light text-slate-100 font-mono">
               {diagnostics?.totalTokensUsed || 14200} <span className="text-xs font-normal text-slate-500">Tokens</span>
             </div>
           </div>
         </div>
 
-        <div className="p-4 rounded-xl bg-slate-950 border border-slate-800/80 shadow-lg flex items-center gap-3">
+        <div className="p-4 rounded-xl bg-slate-950/60 border border-purple-500/15 hover:border-purple-500/35 glow-violet flex items-center gap-3 transition-all">
           <div className="w-10 h-10 rounded-xl bg-purple-500/10 border border-purple-500/30 flex items-center justify-center text-purple-400">
             <Award className="w-5 h-5" />
           </div>
           <div>
-            <div className="text-[10px] font-mono text-slate-400 uppercase tracking-wider">Swarm Reputation</div>
-            <div className="text-lg font-black text-emerald-400 font-mono">
+            <div className="text-[10px] font-mono text-slate-400 uppercase tracking-[0.2em]">Swarm Reputation</div>
+            <div className="text-lg font-light text-emerald-400 font-mono">
               96 <span className="text-xs font-normal text-slate-500">/ 100</span>
             </div>
           </div>

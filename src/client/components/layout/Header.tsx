@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Send, Zap, Bot, Activity, Play, Keyboard } from 'lucide-react';
+import { Send, Zap, Bot, Activity, Play, Keyboard, Home } from 'lucide-react';
 
 interface HeaderProps {
   connected: boolean;
@@ -35,18 +35,28 @@ export const Header: React.FC<HeaderProps> = ({
   };
 
   return (
-    <header className="h-16 bg-slate-950/90 backdrop-blur-md border-b border-slate-800/80 px-6 flex items-center justify-between shrink-0 gap-4">
+    <header className="h-16 bg-slate-950/70 backdrop-blur-md border-b border-amber-500/10 px-6 flex items-center justify-between shrink-0 gap-4">
+      {/* Back to Homepage */}
+      <a
+        href="/homepage/index.html"
+        className="shrink-0 flex items-center gap-2 px-3 py-2 rounded-lg text-[11px] uppercase tracking-[0.2em] font-light text-slate-400 border border-amber-500/15 bg-slate-900/50 hover:text-amber-300 hover:border-amber-500/40 hover:bg-amber-500/5 transition-all group"
+        title="Back to HERMES-HIVE homepage"
+      >
+        <Home className="w-3.5 h-3.5 text-amber-500/70 group-hover:text-amber-400" />
+        <span className="hidden md:inline">Homepage</span>
+      </a>
+
       {/* Quick Objective Dispatcher Input */}
       <form onSubmit={handleQuickSend} className="flex-1 max-w-2xl relative">
         <div className="relative flex items-center">
-          <Bot className="w-4 h-4 text-cyan-400 absolute left-3.5 pointer-events-none" />
+          <Bot className="w-4 h-4 text-amber-400 absolute left-3.5 pointer-events-none" />
           <input
             ref={commandInputRef}
             type="text"
             value={quickPrompt}
             onChange={(e) => setQuickPrompt(e.target.value)}
             placeholder="Command Hermes... (e.g., 'Run a full security audit', 'Create a research team for quantum crypto')"
-            className="w-full bg-slate-900/90 text-xs text-slate-100 placeholder-slate-500 pl-10 pr-32 py-2.5 rounded-lg border border-slate-800 focus:outline-none focus:border-cyan-500/60 focus:ring-1 focus:ring-cyan-500/30 transition-all font-sans"
+            className="w-full bg-slate-900/70 text-xs font-light text-slate-100 placeholder-slate-500 pl-10 pr-32 py-2.5 rounded-lg border border-amber-500/10 focus:outline-none focus:border-amber-500/50 focus:ring-1 focus:ring-amber-500/25 transition-all font-sans"
           />
           <div className="absolute right-20 hidden sm:flex items-center gap-0.5 pointer-events-none">
             <kbd className="px-1.5 py-0.5 text-[10px] font-mono text-slate-500 bg-slate-950/80 rounded border border-slate-800">
@@ -123,11 +133,11 @@ export const Header: React.FC<HeaderProps> = ({
         <div className="flex items-center gap-2 text-xs font-mono">
           <span
             className={`w-2.5 h-2.5 rounded-full ${
-              connected ? 'bg-emerald-400 shadow-[0_0_8px_rgba(52,211,153,0.8)]' : 'bg-red-400'
+              connected ? 'bg-amber-400 heartbeat shadow-[0_0_10px_rgba(255,179,71,0.9)]' : 'bg-red-400'
             }`}
           />
-          <span className="text-slate-400 text-[11px] uppercase tracking-wider hidden sm:inline">
-            {connected ? 'LIVE' : 'POLLING'}
+          <span className="text-slate-400 text-[11px] uppercase tracking-[0.2em] font-light hidden sm:inline">
+            {connected ? 'Live' : 'Polling'}
           </span>
         </div>
       </div>

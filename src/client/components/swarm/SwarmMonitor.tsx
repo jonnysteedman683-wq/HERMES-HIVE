@@ -45,14 +45,14 @@ export const SwarmMonitor: React.FC = () => {
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h2 className="text-xl font-bold text-white flex items-center gap-2">
-            <Zap className="w-5 h-5 text-amber-400" /> Swarm Monitor
+          <h2 className="text-2xl font-extralight tracking-[0.15em] text-white flex items-center gap-2.5 text-glow-amber">
+            <Zap className="w-5 h-5 text-amber-400 heartbeat" /> Swarm Monitor
           </h2>
-          <p className="text-sm text-slate-400 mt-1">
+          <p className="text-sm font-light text-slate-400 mt-1 tracking-wide">
             {data?.repos.length || 0} repo(s) · {totalCycles} cycles · auto-refreshes
           </p>
         </div>
-        <button onClick={fetchData} className="p-2 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 transition-colors">
+        <button onClick={fetchData} className="p-2 rounded-lg bg-slate-900/70 hover:bg-slate-800 text-amber-300 border border-amber-500/15 hover:border-amber-500/40 transition-all">
           <RefreshCw className="w-4 h-4" />
         </button>
       </div>
@@ -63,24 +63,24 @@ export const SwarmMonitor: React.FC = () => {
           const q = repo.quality;
           const agents = q?.agents ? Object.entries(q.agents) : [];
           return (
-            <div key={repo.name} className="bg-slate-900 border border-slate-800 rounded-xl p-4 space-y-3">
+            <div key={repo.name} className="bg-slate-900/60 border border-amber-500/12 rounded-xl p-4 space-y-3 hover:border-amber-500/30 transition-all">
               <div className="flex items-center justify-between">
-                <h3 className="font-semibold text-white">{repo.name}</h3>
-                <span className="text-xs px-2 py-1 rounded-full bg-emerald-900/50 text-emerald-300 border border-emerald-800">
+                <h3 className="font-light tracking-wide text-white">{repo.name}</h3>
+                <span className="text-xs px-2 py-1 rounded-full bg-amber-500/10 text-amber-300 border border-amber-500/25">
                   Cycle #{repo.cycle}
                 </span>
               </div>
               <div className="grid grid-cols-3 gap-2 text-center">
-                <div className="bg-slate-800 rounded-lg p-2">
-                  <div className="text-lg font-bold text-emerald-400"><GitMerge className="w-4 h-4 inline mr-1" />{q?.cycles || 0}</div>
+                <div className="bg-slate-800/60 border border-white/5 rounded-lg p-2">
+                  <div className="text-lg font-light text-emerald-400"><GitMerge className="w-4 h-4 inline mr-1" />{q?.cycles || 0}</div>
                   <div className="text-xs text-slate-500">cycles</div>
                 </div>
-                <div className="bg-slate-800 rounded-lg p-2">
-                  <div className="text-lg font-bold text-blue-400"><Brain className="w-4 h-4 inline mr-1" />{agents.length}</div>
+                <div className="bg-slate-800/60 border border-white/5 rounded-lg p-2">
+                  <div className="text-lg font-light text-purple-400"><Brain className="w-4 h-4 inline mr-1" />{agents.length}</div>
                   <div className="text-xs text-slate-500">models</div>
                 </div>
-                <div className="bg-slate-800 rounded-lg p-2">
-                  <div className="text-lg font-bold text-amber-400"><Trophy className="w-4 h-4 inline mr-1" />{agents.reduce((s, [_, a]) => s + (a as { total_commits: number }).total_commits, 0)}</div>
+                <div className="bg-slate-800/60 border border-white/5 rounded-lg p-2">
+                  <div className="text-lg font-light text-amber-400"><Trophy className="w-4 h-4 inline mr-1" />{agents.reduce((s, [_, a]) => s + (a as { total_commits: number }).total_commits, 0)}</div>
                   <div className="text-xs text-slate-500">commits</div>
                 </div>
               </div>
@@ -91,23 +91,23 @@ export const SwarmMonitor: React.FC = () => {
 
       {/* Quality Leaderboard */}
       {rankedAgents().length > 0 && (
-        <div className="bg-slate-900 border border-slate-800 rounded-xl p-4">
-          <h3 className="font-semibold text-white mb-3 flex items-center gap-2">
+        <div className="bg-slate-900/60 border border-amber-500/12 rounded-xl p-4">
+          <h3 className="font-light tracking-wide text-white mb-3 flex items-center gap-2">
             <Trophy className="w-4 h-4 text-amber-400" /> Model Quality (avg score)
           </h3>
           <div className="space-y-2">
             {rankedAgents().slice(0, 8).map(([model, score], i) => (
-              <div key={model} className="flex items-center gap-3 bg-slate-800 rounded-lg p-2">
-                <span className="text-xs font-mono w-6 text-slate-500">#{i + 1}</span>
+              <div key={model} className="flex items-center gap-3 bg-slate-800/50 border border-white/5 rounded-lg p-2">
+                <span className="text-xs font-mono w-6 text-amber-500/70">#{i + 1}</span>
                 <div className="flex-1 min-w-0">
-                  <div className="text-sm text-slate-300 truncate">{model}</div>
+                  <div className="text-sm font-light text-slate-300 truncate">{model}</div>
                   <div className="text-xs text-slate-500">{score.total_commits} commits · {score.cycles} cycles</div>
                 </div>
                 <div className="flex items-center gap-2">
-                  <div className="w-24 h-2 bg-slate-700 rounded-full overflow-hidden">
-                    <div className="h-full bg-emerald-500 rounded-full transition-all" style={{ width: `${Math.min(score.avg_score, 100)}%` }} />
+                  <div className="w-24 h-2 bg-slate-700/60 rounded-full overflow-hidden">
+                    <div className="h-full bg-gradient-to-r from-amber-500/50 to-amber-400 rounded-full transition-all" style={{ width: `${Math.min(score.avg_score, 100)}%` }} />
                   </div>
-                  <span className="text-sm font-mono text-emerald-400 w-10 text-right">{score.avg_score}</span>
+                  <span className="text-sm font-mono text-amber-400 w-10 text-right">{score.avg_score}</span>
                 </div>
               </div>
             ))}
@@ -117,8 +117,8 @@ export const SwarmMonitor: React.FC = () => {
 
       {/* Recent Learnings */}
       {learnings?.content && (
-        <div className="bg-slate-900 border border-slate-800 rounded-xl p-4">
-          <h3 className="font-semibold text-white mb-3 flex items-center gap-2">
+        <div className="bg-slate-900/60 border border-purple-500/15 rounded-xl p-4">
+          <h3 className="font-light tracking-wide text-white mb-3 flex items-center gap-2">
             <Brain className="w-4 h-4 text-purple-400" /> Recent Learnings
           </h3>
           <pre className="text-xs text-slate-400 whitespace-pre-wrap font-mono max-h-64 overflow-y-auto">

@@ -26,6 +26,7 @@ import { HermesWebConsole } from './client/components/web/HermesWebConsole';
 import { SuprimeSwarmView } from './client/components/suprime/SuprimeSwarmView';
 import { BackendsView } from './client/components/backends/BackendsView';
 import { SwarmMonitor } from './client/components/swarm/SwarmMonitor';
+import { HiveAmbience } from './client/components/layout/HiveAmbience';
 import { Agent } from './shared/types';
 
 export default function App() {
@@ -105,6 +106,8 @@ export default function App() {
 
   return (
     <div className="flex h-screen w-screen bg-slate-950 text-slate-100 font-sans overflow-hidden antialiased select-none relative">
+      <HiveAmbience />
+      <div className="relative z-10 flex flex-1 min-w-0 h-full overflow-hidden">
       <Sidebar
         activeTab={activeTab}
         setActiveTab={setActiveTab}
@@ -200,6 +203,7 @@ export default function App() {
             <SettingsPanel onTriggerDemo={triggerDemoScenario} />
           )}
         </main>
+      </div>
       </div>
 
       <AskHermesFloatingWidget
