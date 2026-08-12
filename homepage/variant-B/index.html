@@ -36,19 +36,19 @@
   /* ---------- stage ---------- */
   .stage{position:fixed;inset:0;z-index:0}
   #hive{position:absolute;inset:0;width:100%;height:100%;display:block}
-  .vignette{
+  /* single static overlay layer: scrim + vignette (grain tile appended by JS) —
+     one layer only, so the compositor never blends multiple full-screen layers
+     over the animated canvas */
+  .fx{
     position:fixed;inset:0;z-index:1;pointer-events:none;
-    background:radial-gradient(125% 95% at 50% 42%,transparent 52%,rgba(3,2,6,.42) 82%,rgba(2,1,4,.72) 100%);
-  }
-  .grain{position:fixed;inset:0;z-index:2;pointer-events:none;opacity:.4;mix-blend-mode:overlay}
-  .scrim{
-    position:fixed;left:0;right:0;top:0;height:54vh;z-index:3;pointer-events:none;
-    background:radial-gradient(80% 64% at 50% 10%,rgba(6,4,10,.72) 0%,rgba(6,4,10,.40) 48%,rgba(6,4,10,0) 74%);
+    background-image:
+      radial-gradient(80% 64% at 50% 10%,rgba(6,4,10,.72) 0%,rgba(6,4,10,.40) 48%,rgba(6,4,10,0) 74%),
+      radial-gradient(125% 95% at 50% 42%,transparent 52%,rgba(3,2,6,.42) 82%,rgba(2,1,4,.72) 100%);
   }
 
   /* ---------- overlay ---------- */
   .ui{
-    position:fixed;inset:0;z-index:3;
+    position:fixed;inset:0;z-index:2;
     display:flex;flex-direction:column;align-items:center;
     justify-content:flex-start;
     padding-top:6vh;
@@ -159,9 +159,7 @@
 <div class="stage">
   <canvas id="hive" role="presentation" aria-hidden="true"></canvas>
 </div>
-<div class="vignette"></div>
-<div class="grain" id="grain"></div>
-<div class="scrim"></div>
+<div class="fx" id="fx"></div>
 
 <div class="ui">
   <h1>HERMES-HIVE</h1>
@@ -182,7 +180,7 @@
 
   var canvas = document.getElementById('hive');
   if (!canvas) return;
-  var ctx = canvas.getContext('2d');
+  var ctx = canvas.getContext('2d', { alpha: false });   // opaque canvas: skips alpha compositing in raster
   if (!ctx) return;
 
   /* ================= tokens ================= */
@@ -263,9 +261,9 @@
     cellCore = R * 0.17;
     cellOuter = R * 0.145;
     orbR     = R * 0.20;
-    glowR    = R * 0.55;
+    glowR    = R * 0.50;
     base.x = W / 2;
-    base.y = H * 0.635;
+    base.y = H * 0.67;
 
     nodes = [];
     var i;
@@ -312,16 +310,16 @@
     /* starfield / dust / fireflies — regenerate on resize */
     var area = W * H, i2;
     stars = [];
-    var nStars = clamp(Math.round(area / 14000), 80, 190);
+    var nStars = clamp(Math.round(area / 17000), 70, 150);
     for (i2 = 0; i2 < nStars; i2++) {
       stars.push({ x: Math.random() * W, y: Math.random() * H,
                    r: 0.4 + Math.random() * 1.1, ph: Math.random() * TAU,
                    sp: 0.25 + Math.random() * 0.7, warm: Math.random() < 0.42 });
     }
     dust = [];
-    for (i2 = 0; i2 < 9; i2++) {
+    for (i2 = 0; i2 < 5; i2++) {
       dust.push({ x: Math.random() * W, y: Math.random() * H,
-                  r: 40 + Math.random() * 90, ph: Math.random() * TAU,
+                  r: 30 + Math.random() * 55, ph: Math.random() * TAU,
                   sp: 0.05 + Math.random() * 0.08, vy: 7 + Math.random() * 9 });
     }
     motes = [];
@@ -442,9 +440,9 @@
       }
       g = Math.min(1, pulse + wave * 1.15);
       col = e.violet ? VIOLET : AMBER;
-      if (g > 0.12) {
-        ctx.strokeStyle = rgba(e.violet ? VDEP : EMBER, g * 0.22);
-        ctx.lineWidth = 3.4 + g * 2.2;
+      if (g > 0.18) {
+        ctx.strokeStyle = rgba(e.violet ? VDEP : EMBER, g * 0.18);
+        ctx.lineWidth = 2.6 + g * 1.8;
         line(pa.x, pa.y, pb.x, pb.y);
       }
       a = Math.min(1, (e.violet ? 0.13 : 0.19) + g * 0.85);
@@ -480,7 +478,7 @@
         ctx.lineJoin = 'round';
         ctx.strokeStyle = 'rgba(7,4,11,0.82)';
         ctx.strokeText(n.label, 0, 0);
-        ctx.fillStyle = n.ring === 0 ? 'rgba(246,238,220,0.9)' : 'rgba(196,182,220,0.74)';
+        ctx.fillStyle = n.ring === 0 ? 'rgba(249,242,226,0.97)' : 'rgba(200,188,226,0.8)';
         ctx.fillText(n.label, 0, 0);
         ctx.restore();
       } else if (n.dot) {
@@ -634,7 +632,8 @@
     theta = t * ROT_SPEED * motion;
     update(dt, t);
 
-    ctx.clearRect(0, 0, W, H);
+    ctx.fillStyle = '#07050b';
+    ctx.fillRect(0, 0, W, H);
     drawStars(t);
     drawDust(t);
     drawLattice(theta, t);
@@ -693,7 +692,8 @@
     }
   });
 
-  /* film grain tile (self-contained, generated once) */
+  /* film grain tile (self-contained, generated once) — appended as the topmost
+     background of the single .fx overlay layer */
   try {
     var g = document.createElement('canvas');
     g.width = g.height = 128;
@@ -703,11 +703,14 @@
     for (var i = 0; i < dd.length; i += 4) {
       var v = (Math.random() * 255) | 0;
       dd[i] = dd[i + 1] = dd[i + 2] = v;
-      dd[i + 3] = 20;
+      dd[i + 3] = 10;
     }
     gc.putImageData(id, 0, 0);
-    var grainEl = document.getElementById('grain');
-    if (grainEl) grainEl.style.backgroundImage = 'url(' + g.toDataURL() + ')';
+    var fxEl = document.getElementById('fx');
+    if (fxEl) {
+      var cur = getComputedStyle(fxEl).backgroundImage;
+      fxEl.style.backgroundImage = 'url(' + g.toDataURL() + '), ' + cur;
+    }
   } catch (e) { /* grain is decorative; skip on failure */ }
 
   /* CTA — demo action, no navigation */
