@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useEffect, useCallback, useState } from 'react';
 
 interface SuprimeTask {
   id: string;
@@ -31,7 +31,7 @@ export const SuprimeSwarmView: React.FC = () => {
   const [lastResult, setLastResult] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
 
-  const load = useMemo(async () => {
+  const load = useCallback(async () => {
     try {
       const [statusRes, tasksRes] = await Promise.all([
         fetch('/api/suprime/status').then((r) => r.json()).catch(() => ({})),

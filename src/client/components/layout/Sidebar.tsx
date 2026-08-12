@@ -18,6 +18,7 @@ import {
   BrainCircuit,
   Dna,
   Workflow,
+  Zap,
 } from 'lucide-react';
 
 export type TabType =
@@ -39,7 +40,8 @@ export type TabType =
   | 'tools'
   | 'diagnostics'
   | 'settings'
-  | 'backends';
+  | 'backends'
+  | 'swarm-monitor';
 
 interface SidebarProps {
   activeTab: TabType;
@@ -67,6 +69,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
     { id: 'cognition', label: 'Cognition & World', icon: Brain },
     { id: 'missions', label: 'Missions & Tasks', icon: Target, badge: activeMissionsCount },
     { id: 'swarm', label: 'Swarm & Agents', icon: Network, badge: activeAgentsCount },
+    { id: 'swarm-monitor', label: 'Swarm Monitor', icon: Zap },
     { id: 'suprime', label: 'SUPRIME Swarm', icon: Workflow },
     { id: 'memory', label: 'Hive Memory', icon: Database },
     { id: 'events', label: 'Event Stream', icon: Activity },

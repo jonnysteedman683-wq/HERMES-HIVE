@@ -25,6 +25,7 @@ import { EvolutionObservatory } from './client/components/collective/EvolutionOb
 import { HermesWebConsole } from './client/components/web/HermesWebConsole';
 import { SuprimeSwarmView } from './client/components/suprime/SuprimeSwarmView';
 import { BackendsView } from './client/components/backends/BackendsView';
+import { SwarmMonitor } from './client/components/swarm/SwarmMonitor';
 import { Agent } from './shared/types';
 
 export default function App() {
@@ -180,6 +181,8 @@ export default function App() {
           {activeTab === 'suprime' && <SuprimeSwarmView />}
 
           {activeTab === 'backends' && <BackendsView />}
+
+          {activeTab === 'swarm-monitor' && <SwarmMonitor />}
 
           {activeTab === 'memory' && (
             <MemoryExplorer records={memoryRecords} onRefresh={refresh} />

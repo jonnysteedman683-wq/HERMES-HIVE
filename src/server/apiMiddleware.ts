@@ -1995,6 +1995,39 @@ export function apiMiddleware(): Plugin {
             }
           }
 
+          // ── Swarm Monitor API ──────────────────────────────────────────
+          // GET /api/swarm/status — current cycle + repo info
+          if (url === '/api/swarm/status' && method === 'GET') {
+            try {
+              const fs = await import('fs');
+              const path = await import('path');
+              const hiveDir = path.join(process.cwd(), '.hive');
+              const reposPath = path.join(hiveDir, 'repos.json');
+              const repos = fs.existsSync(reposPath) ? JSON.parse(fs.readFileSync(reposPath, 'utf-8')).repos || [] : [];
+              const repoStatus = repos.map((r: any) => {
+                const counterPath = path.join(r.path, '.hive', 'swarm_cycle_counter');
+                const qualityPath = path.join(r.path, '.hive', 'quality.json');
+                return {
+                  name: r.name,
+                  cycle: fs.existsSync(counterPath) ? parseInt(fs.readFileSync(counterPath, 'utf-8').trim()) || 0 : 0,
+                  quality: fs.existsSync(qualityPath) ? JSON.parse(fs.readFileSync(qualityPath, 'utf-8')) : null,
+                };
+              });
+              return jsonResponse({ repos: repoStatus, timestamp: new Date().toISOString() });
+            } catch (e) { return jsonResponse({ error: 'Failed to read swarm data' }, 500); }
+          }
+
+          // GET /api/swarm/learnings — recent cycle summaries
+          if (url === '/api/swarm/learnings' && method === 'GET') {
+            try {
+              const fs = await import('fs');
+              const path = await import('path');
+              const learningsPath = path.join(process.cwd(), '.hive', 'learnings.md');
+              const content = fs.existsSync(learningsPath) ? fs.readFileSync(learningsPath, 'utf-8').slice(-5000) : '';
+              return jsonResponse({ content, timestamp: new Date().toISOString() });
+            } catch (e) { return jsonResponse({ error: 'Failed to read learnings' }, 500); }
+          }
+
           // Fallthrough to next if route unhandled
           return next();
         } catch (err) {
