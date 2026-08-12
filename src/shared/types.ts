@@ -875,7 +875,7 @@ export interface ExperimentRecord {
   completedAt?: string;
 }
 
-export type TaskQueueStatus = 'queued' | 'running' | 'completed' | 'failed' | 'cancelled';
+export type TaskQueueStatus = 'queued' | 'running' | 'completed' | 'failed' | 'cancelled' | 'timed_out';
 export type TaskKind = 'agent_llm' | 'agent_tool' | 'tool_execute' | 'llm_generate' | 'health_check' | 'system' | string;
 
 export interface TaskSpec {
@@ -916,7 +916,7 @@ export interface TaskRecord extends TaskSpec {
   startedAt?: string;
   completedAt?: string;
   workerPid?: number | null;
-  errorHistory?: Array<{ error: string; timestamp: string }>;
+  errorHistory?: Array<{ error: string; timestamp: string; attempt?: number }>;
   context?: Record<string, unknown>;
   requiredCapabilities?: string[];
   toolName?: string | null;
@@ -928,7 +928,7 @@ export interface TaskRecord extends TaskSpec {
     maxBackoffMs?: number;
   } | null;
   updatedAt: string;
-  agentRole?: string | null;
+  agentRole?: AgentRole | null;
   agentCapabilities?: string[];
   systemPrompt?: string | null;
 }
@@ -1586,6 +1586,7 @@ export interface HermesWebAuditLog {
   provider: string;
   success: boolean;
   error?: string;
+  errorDetails?: string;
   externalTaskId?: string;
 }
 

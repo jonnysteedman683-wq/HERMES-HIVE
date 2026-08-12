@@ -126,7 +126,7 @@ export class TaskWorker {
       workerId: this.workerId,
       kind: task.kind,
       agentId: task.agentId,
-    }, { taskId, missionId: task.context?.missionId, severity: 'info' });
+    }, { taskId, missionId: task.context?.missionId as string | undefined, severity: 'info' });
 
     try {
       let result: TaskResult;
@@ -161,14 +161,14 @@ export class TaskWorker {
         {
           taskId,
           workerId: this.workerId,
-          missionId: task.context?.missionId,
+          missionId: task.context?.missionId as string | undefined,
           kind: task.kind,
           status: result.status,
           latencyMs: result.latencyMs,
           outputSnippet: result.output?.slice(0, 200),
           error: result.error,
         },
-        { taskId, missionId: task.context?.missionId, severity: result.status === 'completed' ? 'success' : 'warning' }
+        { taskId, missionId: task.context?.missionId as string | undefined, severity: result.status === 'completed' ? 'success' : 'warning' }
       );
 
     } catch (err) {
@@ -186,10 +186,10 @@ export class TaskWorker {
       messageBus.publish('TASK_FAILURE', 'TaskWorker', {
         taskId,
         workerId: this.workerId,
-        missionId: task.context?.missionId,
+        missionId: task.context?.missionId as string | undefined,
         error: errorMsg,
         latencyMs,
-      }, { taskId, missionId: task.context?.missionId, severity: 'error' });
+      }, { taskId, missionId: task.context?.missionId as string | undefined, severity: 'error' });
 
       // Trigger self-healing recovery
       await healingSupervisor.recoverTaskFailure(
@@ -236,7 +236,7 @@ export class TaskWorker {
       throw new Error(`No agent available for task kind '${task.kind}' with role '${task.agentRole}'`);
     }
 
-    agentRegistry.updateAgentStatus(agent.id, 'working', task.taskId, task.context?.missionId);
+    agentRegistry.updateAgentStatus(agent.id, 'working', task.taskId, task.context?.missionId as string | undefined);
 
     const provider = getLlmProvider();
 
@@ -312,7 +312,7 @@ Instructions: Execute this task thoroughly and concisely. Produce concrete, prod
           objective: task.context?.objective,
         }),
       },
-      { agentId: task.agentId, missionId: task.context?.missionId, taskId: task.taskId }
+      { agentId: task.agentId, missionId: task.context?.missionId as string | undefined, taskId: task.taskId }
     );
 
     return {

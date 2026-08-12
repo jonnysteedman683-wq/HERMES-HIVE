@@ -69,6 +69,7 @@ export class TaskRunnerService {
     const taskId = spec.taskId || generateId();
 
     const record: TaskRecord = {
+      id: taskId,
       taskId,
       kind: spec.kind,
       agentId: spec.agentId,
@@ -86,6 +87,7 @@ export class TaskRunnerService {
       status: 'queued',
       retryCount: 0,
       createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
       errorHistory: [],
     };
 
@@ -96,8 +98,8 @@ export class TaskRunnerService {
       kind: spec.kind,
       priority: record.priority,
       agentId: spec.agentId,
-      missionId: spec.context?.missionId,
-    }, { taskId, missionId: spec.context?.missionId, severity: 'info' });
+      missionId: spec.context?.missionId as string | undefined,
+    }, { taskId, missionId: spec.context?.missionId as string | undefined, severity: 'info' });
 
     return taskId;
   }
@@ -187,8 +189,8 @@ export class TaskRunnerService {
     messageBus.publish('SYSTEM_ALERT', 'TaskRunnerService', {
       message: `Task ${taskId} cancelled by operator`,
       taskId,
-      missionId: task.context?.missionId,
-    }, { taskId, missionId: task.context?.missionId, severity: 'warning' });
+      missionId: task.context?.missionId as string | undefined,
+    }, { taskId, missionId: task.context?.missionId as string | undefined, severity: 'warning' });
 
     return true;
   }
@@ -209,7 +211,7 @@ export class TaskRunnerService {
       taskId,
       action: 'retry',
       retryCount: task.retryCount + 1,
-    }, { taskId, missionId: task.context?.missionId, severity: 'info' });
+    }, { taskId, missionId: task.context?.missionId as string | undefined, severity: 'info' });
 
     return true;
   }

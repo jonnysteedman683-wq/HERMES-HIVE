@@ -80,7 +80,7 @@ export const SwarmMonitor: React.FC = () => {
                   <div className="text-xs text-slate-500">models</div>
                 </div>
                 <div className="bg-slate-800 rounded-lg p-2">
-                  <div className="text-lg font-bold text-amber-400"><Trophy className="w-4 h-4 inline mr-1" />{agents.reduce((s, [_, a]) => s + a.total_commits, 0)}</div>
+                  <div className="text-lg font-bold text-amber-400"><Trophy className="w-4 h-4 inline mr-1" />{agents.reduce((s, [_, a]) => s + (a as { total_commits: number }).total_commits, 0)}</div>
                   <div className="text-xs text-slate-500">commits</div>
                 </div>
               </div>
