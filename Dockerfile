@@ -16,7 +16,7 @@ COPY . .
 # Build the application
 RUN bun run build
 
-# Stage 2: Production with static file server
+# Stage 2: Production with Node.js
 FROM node:20-alpine AS production
 
 WORKDIR /app
@@ -34,7 +34,7 @@ EXPOSE 3000
 
 ENV NODE_ENV=production
 
-# Use a simple static server
-RUN npm install -g serve
+# Use simple static server
+RUN apk add --no-cache curl
 
-CMD ["serve", "-s", "."]
+CMD ["npx", "serve", "-s", "."]
