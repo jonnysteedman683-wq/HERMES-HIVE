@@ -65,12 +65,64 @@ class HermesWebEngine {
     });
 
     // 2. Route request through router
-    const response = await capabilityRouter.routeRequest(request);
+    let response: CapabilityResponse;
+    try {
+      response = await capabilityRouter.routeRequest(request);
+    } catch (err) {
+      const errorMessage = err instanceof Error ? err.message : String(err);
+      this.emitEvent({
+        eventId: `evt_${Date.now()}_res`,
+        eventType: 'execution.failed',
+        schemaVersion: '1.0',
+        timestamp: new Date().toISOString(),
+        source: 'hermes-web',
+        correlationId: request.correlationId,
+        traceId: request.traceId,
+        requestId: request.requestId,
+        agentId: request.agentId,
+        capabilityId: request.capabilityId,
+        payload: {
+          status: 'FAILED',
+          executionStatus: 'FAILED',
+          error: errorMessage,
+        },
+      });
+
+      response = {
+        requestId: request.requestId,
+        executionId: `exec_failed_${Date.now()}`,
+        status: 'FAILED',
+        executionStatus: 'FAILED',
+        verificationStatus: 'SKIPPED',
+        result: null,
+        error: {
+          code: 'EXECUTION_ERROR',
+          message: errorMessage,
+          category: 'EXECUTION_ERROR',
+          retryable: false,
+          severity: 'HIGH',
+          requestId: request.requestId,
+          timestamp: new Date().toISOString(),
+        },
+        warnings: ['Capability execution failed before completion.'],
+        timing: {
+          receivedAt: request.timestamp,
+          completedAt: new Date().toISOString(),
+          durationMs: 0,
+        },
+        executionMetadata: {
+          providerUsed: 'hermes-web',
+          executionMode: request.executionMode,
+          traceId: request.traceId,
+          correlationId: request.correlationId,
+        },
+      };
+    }
     this.activeExecutions.set(response.executionId, response);
 
     // 3. Emit completed / status event
     let eventType: CapabilityEventType = 'execution.completed';
-    if (response.status === 'REJECTED') eventType = 'execution.failed';
+    if (response.status === 'REJECTED' || response.status === 'FAILED') eventType = 'execution.failed';
     if (response.status === 'APPROVAL_REQUIRED') eventType = 'approval.required';
 
     this.emitEvent({

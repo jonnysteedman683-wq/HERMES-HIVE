@@ -89,8 +89,14 @@ class HealingSupervisor {
         strategy: isSyntaxOrFormat ? 'Constrained format retry' : 'Immediate execution retry',
       }, { missionId: task.missionId, taskId: task.id, severity: 'info' });
 
-      await onRetryTask(task);
-      return true;
+      try {
+        await onRetryTask(task);
+        return true;
+      } catch (err) {
+        const retryErr = err instanceof Error ? err.message : String(err);
+        console.warn(`[HealingSupervisor] Retry callback failed for task ${task.id}, falling back to reassign:`, retryErr);
+        // Fall through to reassign/escalate path below.
+      }
     }
 
     // Step 3: REASSIGN to new specialized agent
@@ -117,8 +123,14 @@ class HealingSupervisor {
         newAgentName: replacementAgent.name,
       }, { missionId: task.missionId, taskId: task.id, severity: 'info' });
 
-      await onReassignTask(task, replacementAgent.id);
-      return true;
+      try {
+        await onReassignTask(task, replacementAgent.id);
+        return true;
+      } catch (err) {
+        const reassignErr = err instanceof Error ? err.message : String(err);
+        console.warn(`[HealingSupervisor] Reassign callback failed for task ${task.id}, escalating:`, reassignErr);
+        // Fall through to escalate path below.
+      }
     }
 
     // Step 4: ESCALATE to Hermes Executive

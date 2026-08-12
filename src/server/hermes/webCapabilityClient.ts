@@ -51,7 +51,64 @@ export class WebCapabilityClient {
       timestamp: new Date().toISOString(),
     };
 
-    const response = await hermesWebEngine.processCapabilityRequest(request);
+    let response: CapabilityResponse;
+    try {
+      response = await hermesWebEngine.processCapabilityRequest(request);
+    } catch (err) {
+      const errorMessage = err instanceof Error ? err.message : String(err);
+      causalTracingEngine.recordSpan({
+        traceId: activeTraceId,
+        causality: 'TRIGGERED_BY',
+        source: 'WebCapabilityClient',
+        actor: agentId,
+        component: 'CAPABILITY',
+        action: `SIMULATE:${capabilityId}:${operation}`,
+        inputs: parameters,
+        outputs: null,
+        capabilityRef: capabilityId,
+        durationMs: 0,
+        status: 'FAILED',
+        error: {
+          code: 'EXECUTION_ERROR',
+          message: errorMessage,
+          category: 'EXECUTION_ERROR',
+          retryable: false,
+          severity: 'HIGH',
+          requestId: request.requestId,
+          timestamp: new Date().toISOString(),
+        },
+      });
+
+      return {
+        requestId: request.requestId,
+        executionId: `exec_failed_${Date.now()}`,
+        status: 'FAILED',
+        executionStatus: 'FAILED',
+        verificationStatus: 'SKIPPED',
+        result: null,
+        error: {
+          code: 'EXECUTION_ERROR',
+          message: errorMessage,
+          category: 'EXECUTION_ERROR',
+          retryable: false,
+          severity: 'HIGH',
+          requestId: request.requestId,
+          timestamp: new Date().toISOString(),
+        },
+        warnings: ['Capability simulation failed before completion.'],
+        timing: {
+          receivedAt: request.timestamp,
+          completedAt: new Date().toISOString(),
+          durationMs: 0,
+        },
+        executionMetadata: {
+          providerUsed: 'hermes-hive',
+          executionMode: 'SIMULATE',
+          traceId: activeTraceId,
+          correlationId: activeTraceId,
+        },
+      };
+    }
 
     causalTracingEngine.recordSpan({
       traceId: activeTraceId,
@@ -102,7 +159,64 @@ export class WebCapabilityClient {
       timestamp: new Date().toISOString(),
     };
 
-    const response = await hermesWebEngine.processCapabilityRequest(request);
+    let response: CapabilityResponse;
+    try {
+      response = await hermesWebEngine.processCapabilityRequest(request);
+    } catch (err) {
+      const errorMessage = err instanceof Error ? err.message : String(err);
+      causalTracingEngine.recordSpan({
+        traceId: activeTraceId,
+        causality: 'TRIGGERED_BY',
+        source: 'WebCapabilityClient',
+        actor: agentId,
+        component: 'HERMES_WEB',
+        action: `EXECUTE:${capabilityId}:${operation}`,
+        inputs: parameters,
+        outputs: null,
+        capabilityRef: capabilityId,
+        durationMs: 0,
+        status: 'FAILED',
+        error: {
+          code: 'EXECUTION_ERROR',
+          message: errorMessage,
+          category: 'EXECUTION_ERROR',
+          retryable: false,
+          severity: 'HIGH',
+          requestId: request.requestId,
+          timestamp: new Date().toISOString(),
+        },
+      });
+
+      return {
+        requestId: request.requestId,
+        executionId: `exec_failed_${Date.now()}`,
+        status: 'FAILED',
+        executionStatus: 'FAILED',
+        verificationStatus: 'SKIPPED',
+        result: null,
+        error: {
+          code: 'EXECUTION_ERROR',
+          message: errorMessage,
+          category: 'EXECUTION_ERROR',
+          retryable: false,
+          severity: 'HIGH',
+          requestId: request.requestId,
+          timestamp: new Date().toISOString(),
+        },
+        warnings: ['Capability execution failed before completion.'],
+        timing: {
+          receivedAt: request.timestamp,
+          completedAt: new Date().toISOString(),
+          durationMs: 0,
+        },
+        executionMetadata: {
+          providerUsed: 'hermes-hive',
+          executionMode,
+          traceId: activeTraceId,
+          correlationId: activeTraceId,
+        },
+      };
+    }
 
     causalTracingEngine.recordSpan({
       traceId: activeTraceId,
