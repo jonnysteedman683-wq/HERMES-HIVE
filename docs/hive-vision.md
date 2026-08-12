@@ -52,7 +52,7 @@ One full turn of the loop, run continuously:
 |---|---|---|
 | **SENSE** | heartbeat (20m), change monitor (15m), dream cycle (90m), git log + cycle counter | `.hive/heartbeat.json`, `.hive/swarm-consciousness.json`, git history |
 | **SELECT** | **`hive-mind.py`** (new — deterministic commander, no LLM) picks the next milestone in dependency order; effort/impact as tiebreaker | `.hive/milestones.json` (state machine) |
-| **PLAN** | **`hive-mind.py`** decomposes the milestone into 6 build + 3 review tasks → `.hive/milestone_plan.json`; prompt engine **locks** onto it (new: milestone lock) and hive-swarm consumes it unchanged | `.hive/milestone_plan.json` → `.hive/prompt_plan.json` |
+| **PLAN** | **`hive-mind.py`** decomposes the milestone into 9 slots (6 build incl. a competitive pair on the core deliverable + 3 review) → `.hive/milestone_plan.json`; prompt engine **locks** onto it (new: milestone lock) and hive-swarm consumes it unchanged | `.hive/milestone_plan.json` → `.hive/prompt_plan.json` |
 | **BUILD** | existing `hive-swarm.py` cycle — worktrees, 9 agents, competitive pair, merge gate | git commits, cycle commits `chore: [hermes-hive] cycle #N` |
 | **VERIFY** | merge gate (lint+build) + review lanes (security/perf/code+self-report) + **commander-run acceptance commands** (M7 adds runtime probes) | `verify_cmds` exit codes — recorded in milestone evidence |
 | **MEASURE** | quality.json (effort × model → gate-pass) + M4 cost ledger | `.hive/quality.json`, ledger |
