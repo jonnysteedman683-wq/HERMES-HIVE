@@ -1,4 +1,6 @@
-import React, { useEffect, useState } from 'react';
+import React, { useState } from 'react';
+import { formatTime } from '../../lib/format';
+import { usePolling } from '../../hooks/usePolling';
 import {
   Dna,
   FlaskConical,
@@ -68,11 +70,7 @@ export const EvolutionCenter: React.FC = () => {
     }
   };
 
-  useEffect(() => {
-    fetchData();
-    const interval = setInterval(fetchData, 4000);
-    return () => clearInterval(interval);
-  }, []);
+  usePolling(fetchData, 4000);
 
   const handleCreateHypothesis = async () => {
     if (!newHypStatement.trim()) return;
@@ -485,7 +483,7 @@ export const EvolutionCenter: React.FC = () => {
                     }`}>
                       {item.type}
                     </span>
-                    <span className="text-[10px] font-mono text-slate-500">{new Date(item.recordedAt).toLocaleTimeString()}</span>
+                    <span className="text-[10px] font-mono text-slate-500">{formatTime(item.recordedAt)}</span>
                   </div>
 
                   <h4 className="text-xs font-bold text-slate-100">{item.title}</h4>

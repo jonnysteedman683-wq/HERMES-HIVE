@@ -1,4 +1,6 @@
-import React, { useEffect, useState } from 'react';
+import React, { useState } from 'react';
+import { formatTime } from '../../lib/format';
+import { usePolling } from '../../hooks/usePolling';
 import {
   Network,
   Cpu,
@@ -117,11 +119,7 @@ export const Stage10Symbiosis: React.FC = () => {
     }
   };
 
-  useEffect(() => {
-    fetchData();
-    const interval = setInterval(fetchData, 4000);
-    return () => clearInterval(interval);
-  }, []);
+  usePolling(fetchData, 4000);
 
   const handleTransfer = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -634,7 +632,7 @@ export const Stage10Symbiosis: React.FC = () => {
                         <td className="py-2.5 text-emerald-400">{item.toHive}</td>
                         <td className="py-2.5 text-amber-400 font-bold">{item.amount} T</td>
                         <td className="py-2.5 max-w-xs truncate text-slate-300 font-sans">{item.purpose}</td>
-                        <td className="py-2.5 text-slate-500 text-[11px]">{new Date(item.timestamp).toLocaleTimeString()}</td>
+                        <td className="py-2.5 text-slate-500 text-[11px]">{formatTime(item.timestamp)}</td>
                       </tr>
                     ))}
                   </tbody>

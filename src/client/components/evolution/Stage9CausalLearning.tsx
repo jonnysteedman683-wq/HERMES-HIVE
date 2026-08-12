@@ -1,4 +1,6 @@
-import React, { useEffect, useState } from 'react';
+import React, { useState } from 'react';
+import { formatTime } from '../../lib/format';
+import { usePolling } from '../../hooks/usePolling';
 import {
   Brain,
   TrendingUp,
@@ -79,11 +81,7 @@ export const Stage9CausalLearning: React.FC = () => {
     }
   };
 
-  useEffect(() => {
-    fetchData();
-    const interval = setInterval(fetchData, 5000);
-    return () => clearInterval(interval);
-  }, []);
+  usePolling(fetchData, 5000);
 
   const handleApplyDecay = async () => {
     try {
@@ -471,7 +469,7 @@ export const Stage9CausalLearning: React.FC = () => {
                   <div className="flex justify-between items-start">
                     <div>
                       <h4 className="text-sm font-bold text-slate-100">{p.provider}</h4>
-                      <span className="text-[10px] font-mono text-slate-500">Evaluated: {new Date(p.lastEvaluatedAt).toLocaleTimeString()}</span>
+                      <span className="text-[10px] font-mono text-slate-500">Evaluated: {formatTime(p.lastEvaluatedAt)}</span>
                     </div>
                     <div className={`px-2.5 py-1 text-xs font-mono font-bold rounded-lg ${
                       isBad ? 'bg-rose-500/10 text-rose-400 border border-rose-500/20' : 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20'

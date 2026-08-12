@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { formatTime } from '../../lib/format';
 import { Agent, DiagnosticsMetrics, HiveEvent, Mission } from '../../../shared/types';
 import { SwarmTopology } from '../swarm/SwarmTopology';
 import { Bot, Network, Target, Activity, Zap, Cpu, Award, Moon, Play, Clock, User, CheckCircle2, ShieldAlert, Sparkles, Plus, Edit2, Trash2, X, Settings } from 'lucide-react';
@@ -461,7 +462,7 @@ export const HiveDashboard: React.FC<HiveDashboardProps> = ({
                   <div className="flex items-center justify-between">
                     <span className="font-bold text-slate-200 truncate">{item.templateName}</span>
                     <span className="text-[10px] font-mono text-slate-400 shrink-0">
-                      {new Date(item.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' })}
+                      {formatTime(item.timestamp, { hour: '2-digit', minute: '2-digit', second: '2-digit' })}
                     </span>
                   </div>
                   <div className="text-[10px] font-mono text-slate-400 flex items-center gap-1.5 truncate">
@@ -504,7 +505,7 @@ export const HiveDashboard: React.FC<HiveDashboardProps> = ({
                   <span className="text-slate-200 truncate">{evt.source}</span>
                 </div>
                 <span className="text-slate-500 text-[10px] shrink-0 ml-2">
-                  {new Date(evt.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                  {formatTime(evt.timestamp, { hour: '2-digit', minute: '2-digit' })}
                 </span>
               </div>
             ))}

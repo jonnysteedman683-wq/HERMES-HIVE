@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Agent } from '../../../shared/types';
+import { agentStatusBadgeClass } from '../../lib/statusStyles';
 import {
   X,
   Play,
@@ -78,15 +79,7 @@ export const AgentInspector: React.FC<AgentInspectorProps> = ({
   // Status badge renderer
   const renderStatusBadge = (status: Agent['status']) => (
     <span
-      className={`px-2 py-0.5 text-[10px] font-mono rounded-full uppercase font-bold ${
-        status === 'working'
-          ? 'bg-cyan-500/20 text-cyan-300 border border-cyan-500/40'
-          : status === 'idle'
-          ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/40'
-          : status === 'paused'
-          ? 'bg-amber-500/20 text-amber-300 border border-amber-500/40'
-          : 'bg-red-500/20 text-red-300 border border-red-500/40'
-      }`}
+      className={`px-2 py-0.5 text-[10px] font-mono rounded-full uppercase font-bold ${agentStatusBadgeClass(status)}`}
     >
       {status}
     </span>

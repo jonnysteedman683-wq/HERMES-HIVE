@@ -1,4 +1,6 @@
-import React, { useEffect, useState } from 'react';
+import React, { useState } from 'react';
+import { formatTime, formatDate } from '../../lib/format';
+import { usePolling } from '../../hooks/usePolling';
 import {
   BrainCircuit,
   Cpu,
@@ -70,11 +72,7 @@ export const SelfModelCenter: React.FC = () => {
     }
   };
 
-  useEffect(() => {
-    fetchData();
-    const interval = setInterval(fetchData, 4000);
-    return () => clearInterval(interval);
-  }, []);
+  usePolling(fetchData, 4000);
 
   const handleRunCustomScenario = async () => {
     if (!newScenarioTitle.trim()) return;
@@ -310,7 +308,7 @@ export const SelfModelCenter: React.FC = () => {
                     </span>
                     <h4 className="text-xs font-bold text-slate-100">{s.title}</h4>
                   </div>
-                  <span className="text-[10px] font-mono text-slate-500">{new Date(s.simulatedAt).toLocaleTimeString()}</span>
+                  <span className="text-[10px] font-mono text-slate-500">{formatTime(s.simulatedAt)}</span>
                 </div>
 
                 <p className="text-[11px] text-slate-300 bg-slate-900 p-2.5 rounded border border-slate-800">
@@ -378,7 +376,7 @@ export const SelfModelCenter: React.FC = () => {
                 <div key={d.decisionId} className="p-4 bg-slate-900/80 rounded-xl border border-slate-800 space-y-2">
                   <div className="flex justify-between items-center">
                     <span className="text-xs font-bold text-slate-100">{d.objective}</span>
-                    <span className="text-[10px] font-mono text-slate-500">{new Date(d.timestamp).toLocaleDateString()}</span>
+                    <span className="text-[10px] font-mono text-slate-500">{formatDate(d.timestamp)}</span>
                   </div>
                   <p className="text-[11px] text-slate-400"><strong>Strategy:</strong> {d.selectedStrategy}</p>
                   <p className="text-[11px] text-slate-400"><strong>Evidence:</strong> {d.evidence}</p>

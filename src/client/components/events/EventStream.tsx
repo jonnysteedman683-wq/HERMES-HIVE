@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { formatTime } from '../../lib/format';
 import { HiveEvent } from '../../../shared/types';
 import { Activity, Search, ShieldAlert, CheckCircle2, AlertTriangle, Info } from 'lucide-react';
 
@@ -113,7 +114,7 @@ export const EventStream: React.FC<EventStreamProps> = ({ events }) => {
                     </div>
 
                     <span className="text-[10px] text-slate-500">
-                      {new Date(evt.timestamp).toLocaleTimeString()}
+                      {formatTime(evt.timestamp)}
                     </span>
                   </div>
 

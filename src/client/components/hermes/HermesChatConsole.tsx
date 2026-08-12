@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
+import { formatTime } from '../../lib/format';
 import {
   Conversation,
   ConversationContext,
@@ -437,7 +438,7 @@ export const HermesChatConsole: React.FC<HermesChatConsoleProps> = ({
                           </span>
                         )}
                       </span>
-                      <span className="text-slate-500">{new Date(msg.timestamp).toLocaleTimeString()}</span>
+                      <span className="text-slate-500">{formatTime(msg.timestamp)}</span>
                     </div>
 
                     {/* Cognitive Activity Steps */}

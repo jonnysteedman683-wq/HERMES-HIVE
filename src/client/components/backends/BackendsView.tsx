@@ -1,4 +1,6 @@
-import React, { useEffect, useState } from 'react';
+import React, { useState } from 'react';
+import { usePolling } from '../../hooks/usePolling';
+import { backendStatusDotClass } from '../../lib/statusStyles';
 
 interface BackendHealth {
   status: string;
@@ -40,17 +42,7 @@ export const BackendsView: React.FC = () => {
     }
   };
 
-  useEffect(() => {
-    load();
-    const interval = setInterval(load, 5000);
-    return () => clearInterval(interval);
-  }, []);
-
-  const statusColor = (status: string) => {
-    if (status === 'ok') return 'bg-emerald-400';
-    if (status === 'error') return 'bg-red-400';
-    return 'bg-amber-400';
-  };
+  usePolling(load, 5000);
 
   return (
     <div className="h-full flex flex-col gap-6">
@@ -76,7 +68,7 @@ export const BackendsView: React.FC = () => {
                   <h3 className="text-xs font-bold text-slate-200">{name}</h3>
                   <p className="text-[11px] text-slate-400 mt-1">Adapter-backed backend</p>
                 </div>
-                <span className={`w-2.5 h-2.5 rounded-full ${statusColor(health.status)}`} />
+                <span className={`w-2.5 h-2.5 rounded-full ${backendStatusDotClass(health.status)}`} />
               </div>
 
               <div className="mt-4 grid grid-cols-2 gap-3 text-[11px] font-mono">

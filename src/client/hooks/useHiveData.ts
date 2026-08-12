@@ -87,67 +87,38 @@ export function useHiveData() {
     };
   }, [fetchData]);
 
-  const sendHermesCommand = async (command: string) => {
-    try {
-      const res = await fetch('/api/hermes/command', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ command }),
-      });
-      const data = await res.json();
-      await fetchData();
-      return data;
-    } catch (err) {
-      console.error('[useHiveData] Error sending Hermes command:', err);
-      throw err;
-    }
-  };
+  /**
+   * Shared POST → json → refresh wrapper for all command-style actions.
+   * `body` is omitted (no Content-Type header) when undefined.
+   */
+  const postAndRefresh = useCallback(
+    async (path: string, body?: unknown, errorLabel = 'request') => {
+      try {
+        const res = await fetch(path, {
+          method: 'POST',
+          headers: body !== undefined ? { 'Content-Type': 'application/json' } : undefined,
+          body: body !== undefined ? JSON.stringify(body) : undefined,
+        });
+        const data = await res.json();
+        await fetchData();
+        return data;
+      } catch (err) {
+        console.error(`[useHiveData] Error ${errorLabel}:`, err);
+        throw err;
+      }
+    },
+    [fetchData]
+  );
 
-  const triggerDemoScenario = async (scenario: string) => {
-    try {
-      const res = await fetch('/api/demo/trigger', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ scenario }),
-      });
-      const data = await res.json();
-      await fetchData();
-      return data;
-    } catch (err) {
-      console.error('[useHiveData] Error triggering demo scenario:', err);
-      throw err;
-    }
-  };
+  const sendHermesCommand = (command: string) => postAndRefresh('/api/hermes/command', { command }, 'sending Hermes command');
 
-  const applyAgentAction = async (agentId: string, action: 'pause' | 'resume' | 'terminate' | 'restart') => {
-    try {
-      const res = await fetch(`/api/agents/${agentId}/${action}`, {
-        method: 'POST',
-      });
-      const data = await res.json();
-      await fetchData();
-      return data;
-    } catch (err) {
-      console.error(`[useHiveData] Error applying agent action ${action}:`, err);
-      throw err;
-    }
-  };
+  const triggerDemoScenario = (scenario: string) => postAndRefresh('/api/demo/trigger', { scenario }, 'triggering demo scenario');
 
-  const applyBulkAgentAction = async (agentIds: string[], action: 'pause' | 'resume' | 'terminate' | 'restart') => {
-    try {
-      const res = await fetch('/api/agents/bulk-action', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ agentIds, action }),
-      });
-      const data = await res.json();
-      await fetchData();
-      return data;
-    } catch (err) {
-      console.error(`[useHiveData] Error applying bulk agent action ${action}:`, err);
-      throw err;
-    }
-  };
+  const applyAgentAction = (agentId: string, action: 'pause' | 'resume' | 'terminate' | 'restart') =>
+    postAndRefresh(`/api/agents/${agentId}/${action}`, undefined, `applying agent action ${action}`);
+
+  const applyBulkAgentAction = (agentIds: string[], action: 'pause' | 'resume' | 'terminate' | 'restart') =>
+    postAndRefresh('/api/agents/bulk-action', { agentIds, action }, `applying bulk agent action ${action}`);
 
   return {
     agents,

@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { Agent } from '../../../shared/types';
+import { agentStatusVisual, groupAgentsByCluster } from '../../lib/statusStyles';
 import { 
   Bot, 
   Shield, 
@@ -37,24 +38,7 @@ export const SwarmTopology: React.FC<SwarmTopologyProps> = ({
   const selectedAgentIds = selectedAgents.map((a) => a.id);
 
   // Group agents by cluster
-  const clusterA = agents.filter((a) => a.clusterId === 'Cluster A' || !a.clusterId);
-  const clusterB = agents.filter((a) => a.clusterId === 'Cluster B');
-  const clusterC = agents.filter((a) => a.clusterId === 'Cluster C');
-
-  const getStatusColor = (status: Agent['status']) => {
-    switch (status) {
-      case 'working':
-        return { bg: 'bg-cyan-500', stroke: '#06b6d4', glow: 'shadow-[0_0_15px_rgba(6,182,212,0.6)]' };
-      case 'idle':
-        return { bg: 'bg-emerald-500', stroke: '#10b981', glow: 'shadow-[0_0_10px_rgba(16,185,129,0.3)]' };
-      case 'paused':
-        return { bg: 'bg-amber-500', stroke: '#f59e0b', glow: 'shadow-[0_0_10px_rgba(245,158,11,0.3)]' };
-      case 'failed':
-        return { bg: 'bg-red-500', stroke: '#ef4444', glow: 'shadow-[0_0_15px_rgba(239,68,68,0.6)]' };
-      default:
-        return { bg: 'bg-slate-500', stroke: '#64748b', glow: '' };
-    }
-  };
+  const { clusterA, clusterB, clusterC } = groupAgentsByCluster(agents);
 
   const renderStatusIcon = (status: Agent['status']) => {
     switch (status) {
@@ -279,7 +263,7 @@ export const SwarmTopology: React.FC<SwarmTopologyProps> = ({
               </div>
               <div className="flex flex-wrap gap-2 justify-center">
                 {clusterA.map((agent) => {
-                  const colors = getStatusColor(agent.status);
+                  const colors = agentStatusVisual(agent.status);
                   const isSelected = selectedAgentIds.includes(agent.id);
                   return (
                     <div
@@ -323,7 +307,7 @@ export const SwarmTopology: React.FC<SwarmTopologyProps> = ({
               </div>
               <div className="flex flex-wrap gap-2 justify-center">
                 {clusterB.map((agent) => {
-                  const colors = getStatusColor(agent.status);
+                  const colors = agentStatusVisual(agent.status);
                   const isSelected = selectedAgentIds.includes(agent.id);
                   return (
                     <div
@@ -367,7 +351,7 @@ export const SwarmTopology: React.FC<SwarmTopologyProps> = ({
               </div>
               <div className="flex flex-wrap gap-2 justify-center">
                 {clusterC.map((agent) => {
-                  const colors = getStatusColor(agent.status);
+                  const colors = agentStatusVisual(agent.status);
                   const isSelected = selectedAgentIds.includes(agent.id);
                   return (
                     <div
